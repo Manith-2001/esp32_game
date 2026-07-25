@@ -52,6 +52,7 @@ def convert(input_path, array_name, output_path, bg_color):
                 r, g, b = px[:3]
 
             rgb565 = rgb888_to_rgb565(r, g, b)
+            rgb565 = ((rgb565 & 0xFF) << 8) | ((rgb565 >> 8) & 0xFF)  # swap bytes for ESP32
             pixels.append(rgb565)
 
     hex_lines = []
