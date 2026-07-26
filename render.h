@@ -11,5 +11,6 @@ private:
   static constexpr uint8_t COLS = 20;
   static constexpr uint8_t ROWS = 15;
   static constexpr uint8_t TILE_S = 16;
+  const uint16_t *tile_for(uint8_t index);
   TFT_eSPI &tft;
 };
