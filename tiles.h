@@ -1,6 +1,9 @@
 #pragma once
 #include "stdint.h"
 
+#define BG_COLOR TFT_SKYBLUE
+#define BG_SWAP(c) (((c & 0xFF) << 8) | ((c >> 8) & 0xFF))
+
 // 16x16 RGB565 tile (block.png)
 static const uint16_t block[16 * 16] PROGMEM = {
     0x81FC, 0x81FC, 0x81FC, 0x0001, 0x81FC, 0x81FC, 0x81FC, 0x0001, 0x81FC,

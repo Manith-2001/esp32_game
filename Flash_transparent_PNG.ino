@@ -28,6 +28,7 @@
 #include "assets/piskel.h"
 #include "render.h"
 #include "level.h"
+#include "tiles.h"
 
 PNG png;  // PNG decoder instance
 // Compilation error: invalid conversion from 'void (*)(PNGDRAW*)' {aka 'void (*)(png_draw_tag*)'} to 'int (*)(PNGDRAW*)' {aka 'int (*)(png_draw_tag*)'} [-fpermissive]
@@ -53,7 +54,7 @@ void setup() {
   // Initialise the TFT
   tft.begin();
   tft.setRotation(1);
-  tft.fillScreen(TFT_SKYBLUE);
+  tft.fillScreen(BG_COLOR);
   renderer.render_level(level_map);
 
   Serial.println("\r\nInitialisation done.");
