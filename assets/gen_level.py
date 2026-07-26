@@ -13,11 +13,13 @@ ROWS = SCREEN_H // TILE_SIZE   # 15
 AIR   = 0
 DIRT  = 1
 GRASS = 2
+CLOUD = 3
 
 TILE_GLYPH = {
     AIR:   "  ",
     DIRT:  "##",
     GRASS: "^^",
+    CLOUD: "~~",
 }
 
 
@@ -27,9 +29,9 @@ def generate_map(seed=None):
 
     grid = [[AIR for _ in range(COLS)] for _ in range(ROWS)]
 
-    # Bottom 2 rows = solid ground, top ground row = grass
+    # Bottom 2 rows = solid dirt ground
     grid[ROWS - 1] = [DIRT for _ in range(COLS)]
-    grid[ROWS - 2] = [GRASS for _ in range(COLS)]
+    grid[ROWS - 2] = [DIRT for _ in range(COLS)]
 
     # Carve random pits in the ground
     num_pits = random.randint(1, 3)
@@ -40,15 +42,28 @@ def generate_map(seed=None):
             grid[ROWS - 2][col] = AIR
             grid[ROWS - 1][col] = AIR
 
-    # Scatter floating platforms
+    # Scatter grass on surface dirt blocks (dirt with air above)
+    for col in range(COLS):
+        for row in range(ROWS):
+            if grid[row][col] == DIRT and row > 0 and grid[row - 1][col] == AIR:
+                if random.random() < 0.5:
+                    grid[row][col] = GRASS
+
+    # Scatter floating platforms (dirt only, no grass)
     num_platforms = random.randint(2, 4)
     for _ in range(num_platforms):
         plat_w = random.randint(2, 4)
         plat_x = random.randint(0, COLS - plat_w)
         plat_y = random.randint(3, 10)
         for col in range(plat_x, plat_x + plat_w):
-            grid[plat_y][col] = GRASS
+            grid[plat_y][col] = DIRT
             grid[plat_y + 1][col] = DIRT
+
+    # Scatter single cloud tiles in the sky
+    for col in range(COLS):
+        for row in range(1, 8):
+            if grid[row][col] == AIR and random.random() < 0.08:
+                grid[row][col] = CLOUD
 
     return grid
 
