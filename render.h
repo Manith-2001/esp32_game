@@ -1,3 +1,4 @@
+#pragma once
 #include "Arduino.h"
 #include "TFT_eSPI.h"
 #include <cstdint>
@@ -6,11 +7,13 @@ class Renderer {
 public:
   Renderer(TFT_eSPI &tft);
   void render_level(const uint8_t level_map[][20]);
+  void render_region(const uint8_t level_map[][20], int x, int y, int w, int h);
 
 private:
   static constexpr uint8_t COLS = 20;
   static constexpr uint8_t ROWS = 15;
   static constexpr uint8_t TILE_S = 16;
   const uint16_t *tile_for(uint8_t index);
+  void draw_tile(uint8_t tile, int col, int row);
   TFT_eSPI &tft;
 };
