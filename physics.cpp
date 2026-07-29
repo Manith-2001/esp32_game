@@ -1,6 +1,10 @@
 #include "physics.h"
 #include "Arduino.h"
 
+bool Physics::tile_is_solid(uint8_t t) {
+    return t < (sizeof(SOLID_TILE) / sizeof(SOLID_TILE[0])) && SOLID_TILE[t];
+}
+
 bool Physics::is_solid(const uint8_t level_map[][COLS], int px, int py) {
     if (px < 0 || px >= COLS * TILE_S || py < 0)
         return false;
@@ -8,7 +12,8 @@ bool Physics::is_solid(const uint8_t level_map[][COLS], int px, int py) {
         return true;
     uint8_t col = px / TILE_S;
     uint8_t row = py / TILE_S;
-    return pgm_read_byte(&level_map[row][col]) != 0;
+    uint8_t t = pgm_read_byte(&level_map[row][col]);
+    return tile_is_solid(t);
 }
 
 bool Physics::check_ground(const uint8_t level_map[][COLS], float x, float y, int w, int h) {
