@@ -27,8 +27,10 @@
 #include "SpongeBob.h"
 #include "assets/piskel.h"
 #include "render.h"
+#include "player.h"
 #include "level.h"
 #include "tiles.h"
+#include "debug.h"
 
 PNG png;  // PNG decoder instance
 // Compilation error: invalid conversion from 'void (*)(PNGDRAW*)' {aka 'void (*)(png_draw_tag*)'} to 'int (*)(PNGDRAW*)' {aka 'int (*)(png_draw_tag*)'} [-fpermissive]
@@ -39,6 +41,7 @@ PNG png;  // PNG decoder instance
 #include <TFT_eSPI.h>       // Hardware-specific library
 TFT_eSPI tft = TFT_eSPI();  // Invoke custom library
 Renderer renderer(tft);
+Player player(tft, 10, 0);
 
 // Position variables must be global (PNGdec does not handle position coordinates)
 int16_t xpos = 0;
@@ -49,13 +52,16 @@ int16_t ypos = 120;
 //====================================================================================
 void setup() {
   Serial.begin(115200);
-  // Serial.println("\n\n Using the PNGdec library");
 
   // Initialise the TFT
   tft.begin();
   tft.setRotation(1);
+
+  // Draw the static level once; the game loop only updates the moving player.
   tft.fillScreen(BG_COLOR);
   renderer.render_level(level_map);
+
+  debug_init();
 
   Serial.println("\r\nInitialisation done.");
 }
@@ -64,37 +70,18 @@ void setup() {
 //                                    Loop
 //====================================================================================
 void loop() {
-  // uint16_t pngw = 0, pngh = 0;  // To store width and height of image
-  //
-  // // int16_t rc = png.openFLASH((uint8_t *)bob, sizeof(bob), pngDraw);
-  // int16_t background = png.openFLASH((uint8_t *)piskel, sizeof(piskel), pngDraw);
-  //
-  // if (background == PNG_SUCCESS) {
-  //   Serial.println("Successfully opened png file");
-  //   pngw = png.getWidth();
-  //   pngh = png.getHeight();
-  //   Serial.printf("Image metrics: (%d x %d), %d bpp, pixel type: %d\n", pngw, pngh, png.getBpp(), png.getPixelType());
-  //
-  //   tft.startWrite();
-  //   uint32_t dt = millis();
-  //   // rc = png.decode(NULL, 0);
-  //   Serial.println("Starting write");
-  //   background = png.decode(NULL, 0);
-  //   Serial.println("Ending write");
-  //   tft.endWrite();
-  //   Serial.print(millis() - dt);
-  //   Serial.println("ms");
-  //   tft.endWrite();
-  //
-  //   // png.close(); // Required for files, not needed for FLASH arrays
-  // }
-  //
-  delay(250);
-  //
-  // // Randomly change position
-  // // xpos = random(tft.width() - pngw);
-  // // ypos = random(tft.height() - pngh);
-  //
-  // // Fill screen with a random colour at random intervals
-  // // if (random(100) < 20) tft.fillScreen(random(0x10000));
+#if DEBUG_MODE
+  unsigned long t0 = micros();
+  float pvx = player.getVX(), pvy = player.getVY();
+  float px  = player.getX(),  py  = player.getY();
+  bool  pg  = player.isGrounded();
+#endif
+
+  player.clear(renderer, level_map);
+  player.update(level_map);
+  player.draw();
+
+#if DEBUG_MODE
+  debug_frame(player, level_map, micros() - t0, pvx, pvy, px, py, pg);
+#endif
 }
