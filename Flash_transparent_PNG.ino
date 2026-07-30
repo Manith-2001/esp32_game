@@ -31,6 +31,7 @@
 #include "level.h"
 #include "tiles.h"
 #include "debug.h"
+#include "serial_input.h"
 
 PNG png;  // PNG decoder instance
 // Compilation error: invalid conversion from 'void (*)(PNGDRAW*)' {aka 'void (*)(png_draw_tag*)'} to 'int (*)(PNGDRAW*)' {aka 'int (*)(png_draw_tag*)'} [-fpermissive]
@@ -42,6 +43,7 @@ PNG png;  // PNG decoder instance
 TFT_eSPI tft = TFT_eSPI();  // Invoke custom library
 Renderer renderer(tft);
 Player player(tft, 10, 0);
+SerialInput input;
 
 // Position variables must be global (PNGdec does not handle position coordinates)
 int16_t xpos = 0;
@@ -78,7 +80,7 @@ void loop() {
 #endif
 
   player.clear(renderer, level_map);
-  player.update(level_map);
+  player.update(level_map, input.poll());
   player.draw();
 
 #if DEBUG_MODE
