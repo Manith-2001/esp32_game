@@ -61,7 +61,7 @@ void Physics::resolve_y(const uint8_t level_map[][COLS], float x, float &y, int 
     int right = (int)(x + w - 1);
 
     if (vy > 0) {
-        int bot = (int)(new_y + h - 1);
+        int bot = (int)(new_y + h);
         for (int px = left; px <= right; px++) {
             if (is_solid(level_map, px, bot)) {
                 new_y = (bot / TILE_S) * TILE_S - h;
