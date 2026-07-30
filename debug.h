@@ -17,7 +17,7 @@
 #define DEBUG_MODE 1
 
 #if DEBUG_MODE
-  #define DEBUG_COMPACT   0
+  #define DEBUG_COMPACT   1
   #define DEBUG_SURROUND  1
   #define DEBUG_COLLISION 1
 #endif
@@ -27,11 +27,22 @@
 class Player;
 
 #if DEBUG_MODE
+
+enum GameEvent : uint8_t {
+    EVENT_NONE             = 0,
+    EVENT_PLAYER_MOVED     = 1 << 0,
+    EVENT_VELOCITY_CHANGE  = 1 << 1,
+    EVENT_GROUND_CHANGE    = 1 << 2,
+    EVENT_COLLISION        = 1 << 3,
+};
+
 void debug_init();
+void debug_signal(GameEvent event);
 void debug_frame(const Player &p, const uint8_t level_map[][20],
                  unsigned long dt_us, float prev_vx, float prev_vy,
                  float prev_x, float prev_y, bool prev_grounded);
 #else
 #define debug_init() ((void)0)
+#define debug_signal(ev) ((void)0)
 #define debug_frame(p, lm, dt, pvx, pvy, px, py, pg) ((void)0)
 #endif

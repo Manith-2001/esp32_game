@@ -6,6 +6,12 @@
 #include "physics.h"
 #include <Arduino.h>
 
+static uint8_t g_pending_events = 0;
+
+void debug_signal(GameEvent event) {
+    g_pending_events |= (uint8_t)event;
+}
+
 static constexpr uint8_t COLS = Physics::COLS;
 static constexpr uint8_t ROWS = Physics::ROWS;
 static constexpr uint8_t TILE_S = Physics::TILE_S;
@@ -121,6 +127,28 @@ void debug_frame(const Player &p, const uint8_t (*level_map)[COLS],
     static constexpr int W = 10;
     static constexpr int H = 10;
 
+    // ---- state-change detection (always runs, sets event flags) ----
+
+    if ((int)x != (int)prev_x || (int)y != (int)prev_y)
+        debug_signal(EVENT_PLAYER_MOVED);
+
+    if (vx != prev_vx)
+        debug_signal(EVENT_VELOCITY_CHANGE);
+
+    bool vx_halted = (prev_vx > 0.1f && vx < 0.1f) || (prev_vx < -0.1f && vx > -0.1f);
+    bool vy_landed = (prev_vy > 0.1f && vy < 0.1f);
+    bool vy_ceiled = (prev_vy < -0.1f && vy > -0.1f);
+    bool grnd_changed = (g != prev_grounded);
+
+    if (vx_halted || vy_landed || vy_ceiled)
+        debug_signal(EVENT_COLLISION);
+
+    if (grnd_changed)
+        debug_signal(EVENT_GROUND_CHANGE);
+
+    // ---- gate: skip all output if nothing happened ----
+    if (g_pending_events == 0) return;
+
     // ---- tile coordinates (player centre) ----
     int pc = (int)(x + W / 2) / TILE_S;
     int pr = (int)(y + H / 2) / TILE_S;
@@ -153,12 +181,7 @@ void debug_frame(const Player &p, const uint8_t (*level_map)[COLS],
 
     // ---- collision events ----
 #if DEBUG_COLLISION
-    bool vx_stopped = (prev_vx > 0.1f && vx < 0.1f) || (prev_vx < -0.1f && vx > -0.1f);
-    bool vy_landed  = (prev_vy > 0.1f && vy < 0.1f);
-    bool vy_ceiled  = (prev_vy < -0.1f && vy > -0.1f);
-    bool grnd_changed = (g != prev_grounded);
-
-    if (vx_stopped && prev_vx > 0.1f) {
+    if (vx_halted && prev_vx > 0.1f) {
         int edge_x = (int)(x + W);
         HitInfo hit = scan_edge(level_map, edge_x, (int)y, edge_x, (int)(y + H - 1));
         if (hit.found) {
@@ -166,7 +189,7 @@ void debug_frame(const Player &p, const uint8_t (*level_map)[COLS],
                           g_frame, prev_vx, vx, edge_x, hit.col, hit.row,
                           hit.type == 0xFF ? "SCREEN" : tile_name(hit.type));
         }
-    } else if (vx_stopped && prev_vx < -0.1f) {
+    } else if (vx_halted && prev_vx < -0.1f) {
         int edge_x = (int)x - 1;
         HitInfo hit = scan_edge(level_map, edge_x, (int)y, edge_x, (int)(y + H - 1));
         if (hit.found) {
@@ -207,8 +230,7 @@ void debug_frame(const Player &p, const uint8_t (*level_map)[COLS],
 
     // ---- surroundings ----
 #if DEBUG_SURROUND
-    bool state_changed = vx_stopped || vy_landed || vy_ceiled || grnd_changed;
-    if (state_changed || (g_frame % 30 == 0)) {
+    if (vx_halted || vy_landed || vy_ceiled || grnd_changed) {
         int tc = (int)x / TILE_S;
         int tr = (int)y / TILE_S;
 
@@ -248,6 +270,8 @@ void debug_frame(const Player &p, const uint8_t (*level_map)[COLS],
         Serial.println();
     }
 #endif
+
+    g_pending_events = 0;
 }
 
 #endif // DEBUG_MODE
