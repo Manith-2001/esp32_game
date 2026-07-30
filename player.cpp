@@ -10,7 +10,7 @@ void Player::update(const uint8_t level_map[][20]) {
     if (vy > MAX_VY) vy = MAX_VY;
 
     Physics::resolve_x(level_map, x, y, W, H, vx);
-    Physics::resolve_y(level_map, x, y, W, H, vy, grounded);
+    Physics::resolve_y(level_map, x, y, W, H, vy);
 
     if (x < 0)                { x = 0;            vx =  SPEED; }
     if (x + W > tft.width())  { x = tft.width() - W; vx = -SPEED; }

@@ -55,7 +55,7 @@ void Physics::resolve_x(const uint8_t level_map[][COLS], float &x, float y, int 
     x = new_x;
 }
 
-void Physics::resolve_y(const uint8_t level_map[][COLS], float x, float &y, int w, int h, float &vy, bool &grounded) {
+void Physics::resolve_y(const uint8_t level_map[][COLS], float x, float &y, int w, int h, float &vy) {
     float new_y = y + vy;
     int left = (int)x;
     int right = (int)(x + w - 1);
@@ -66,7 +66,6 @@ void Physics::resolve_y(const uint8_t level_map[][COLS], float x, float &y, int 
             if (is_solid(level_map, px, bot)) {
                 new_y = (bot / TILE_S) * TILE_S - h;
                 vy = 0;
-                grounded = true;
                 break;
             }
         }
