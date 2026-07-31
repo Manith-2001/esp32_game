@@ -1,4 +1,3 @@
-
 // This example renders a png file that is stored in a FLASH array
 // using the PNGdec library (available via library manager).
 
@@ -32,22 +31,21 @@
 #include "tiles.h"
 #include "debug.h"
 #include "serial_input.h"
+#include "rtos_tasks.h"
 
-PNG png;  // PNG decoder instance
-// Compilation error: invalid conversion from 'void (*)(PNGDRAW*)' {aka 'void (*)(png_draw_tag*)'} to 'int (*)(PNGDRAW*)' {aka 'int (*)(png_draw_tag*)'} [-fpermissive]
-#define MAX_IMAGE_WIDTH 320  // Sets rendering line buffer lengths, adjust for your images
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
+#include <freertos/queue.h>
+#include <freertos/semphr.h>
 
 // Include the TFT library - see https://github.com/Bodmer/TFT_eSPI for library information
 #include "SPI.h"
 #include <TFT_eSPI.h>       // Hardware-specific library
-TFT_eSPI tft = TFT_eSPI();  // Invoke custom library
-Renderer renderer(tft);
-Player player(tft, 10, 0);
-SerialInput input;
 
-// Position variables must be global (PNGdec does not handle position coordinates)
-int16_t xpos = 0;
-int16_t ypos = 120;
+TFT_eSPI tft = TFT_eSPI();  // Invoke custom library
+
+// Shared parameters for the sim+render task; lifetime spans the whole sketch.
+static SimParams g_simParams;
 
 //====================================================================================
 //                                    Setup
@@ -55,15 +53,26 @@ int16_t ypos = 120;
 void setup() {
   Serial.begin(115200);
 
-  // Initialise the TFT
+  // Create IPC primitives before any task is running.
+  g_simParams.tftMutex = xSemaphoreCreateMutex();
+  g_simParams.inputQueue = xQueueCreate(1, sizeof(InputState));
+
+  // Initialise the TFT and draw the static level once.
+  // All TFT access is guarded by the mutex, including setup-time rendering.
+  xSemaphoreTake(g_simParams.tftMutex, portMAX_DELAY);
   tft.begin();
   tft.setRotation(1);
-
-  // Draw the static level once; the game loop only updates the moving player.
+  Renderer renderer(tft);
   tft.fillScreen(BG_COLOR);
   renderer.render_level(level_map);
+  xSemaphoreGive(g_simParams.tftMutex);
 
   debug_init();
+
+  // Start the real-time tasks.
+  // Sim+render on core 1 (APP_CPU), higher priority; input on core 0 (PRO_CPU).
+  xTaskCreatePinnedToCore(simRenderTask, "simRender", 4096, &g_simParams, 2, NULL, 1);
+  xTaskCreatePinnedToCore(inputTask,     "input",     1024, g_simParams.inputQueue, 1, NULL, 0);
 
   Serial.println("\r\nInitialisation done.");
 }
@@ -72,18 +81,8 @@ void setup() {
 //                                    Loop
 //====================================================================================
 void loop() {
-#if DEBUG_MODE
-  unsigned long t0 = micros();
-  float pvx = player.getVX(), pvy = player.getVY();
-  float px  = player.getX(),  py  = player.getY();
-  bool  pg  = player.isGrounded();
-#endif
-
-  player.clear(renderer, level_map);
-  player.update(level_map, input.poll());
-  player.draw();
-
-#if DEBUG_MODE
-  debug_frame(player, level_map, micros() - t0, pvx, pvy, px, py, pg);
-#endif
+  // All work is done by FreeRTOS tasks; the Arduino loopTask sleeps forever.
+  for (;;) {
+    vTaskDelay(portMAX_DELAY);
+  }
 }
