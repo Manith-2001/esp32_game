@@ -20,10 +20,11 @@ public:
 private:
     static constexpr int W = 10;
     static constexpr int H = 10;
-    static constexpr float GRAVITY = 0.5f;
-    static constexpr float MAX_VY = 8.0f;
+    static constexpr float GRAVITY = 0.4f;
+    static constexpr float MAX_VY = 10.0f;
     static constexpr float SPEED = 1.0f;
-    static constexpr float JUMP_VELOCITY = 4.0f;
+    static constexpr float JUMP_VELOCITY = 7.0f;
+    static constexpr float AIR_CONTROL = 0.7f;
 
     TFT_eSPI &tft;
     float x, y;

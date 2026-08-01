@@ -7,7 +7,8 @@ Player::Player(TFT_eSPI &tft, float x, float y)
       grounded(false) {}
 
 void Player::update(const uint8_t level_map[][20], const InputState &input) {
-  vx = (input.right - input.left) * SPEED;
+  float multiplier = grounded ? 1.0f : AIR_CONTROL;
+  vx = (input.right - input.left) * SPEED * multiplier;
 
   if (input.jump && grounded)
     vy = -JUMP_VELOCITY;
