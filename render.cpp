@@ -2,8 +2,6 @@
 #include "Arduino.h"
 #include "TFT_eSPI.h"
 #include "tiles.h"
-#include <cstdint>
-#include <cstring>
 
 Renderer::Renderer(TFT_eSPI &tft) : tft(tft) {}
 
@@ -20,45 +18,73 @@ const uint16_t *Renderer::tile_for(uint8_t index) {
   }
 }
 
-void Renderer::draw_tile(uint8_t tile, int col, int row, int cam_x) {
-  int sx = col * TILE_S - cam_x;
-  int sy = row * TILE_S;
+void Renderer::render_frame(const uint8_t level_map[][LEVEL_COLS], int cam_x,
+                             const uint16_t *sprite, int spr_x, int spr_y,
+                             int spr_w, int spr_h) {
+  static uint16_t row_buf[SCREEN_W * TILE_S];
 
-  if (sx + TILE_S <= 0 || sx >= (int)SCREEN_W ||
-      sy + TILE_S <= 0 || sy >= (int)SCREEN_H)
-    return;
-
-  const uint16_t *data = tile_for(tile);
-  uint16_t data_mut[TILE_S * TILE_S];
-  memcpy(data_mut, data, TILE_S * TILE_S * sizeof(uint16_t));
-  for (int i = 0; i < TILE_S * TILE_S; i++) {
-    if (data_mut[i] == 0x0000) {
-      data_mut[i] = BG_SWAP(BG_COLOR);
-    }
-  }
-  tft.pushImage(sx, sy, TILE_S, TILE_S, data_mut);
-}
-
-void Renderer::render_visible(const uint8_t level_map[][LEVEL_COLS], int cam_x) {
   int start_col = cam_x / TILE_S;
   int end_col = (cam_x + SCREEN_W - 1) / TILE_S;
-
   if (start_col < 0) start_col = 0;
   if (end_col >= COLS) end_col = COLS - 1;
 
+  const uint16_t bg = BG_SWAP(BG_COLOR);
+  const bool has_sprite = (sprite != nullptr && spr_w > 0 && spr_h > 0);
+
+  int spr_r0 = 0, spr_r1 = -1;
+  if (has_sprite) {
+    spr_r0 = spr_y / TILE_S;
+    spr_r1 = (spr_y + spr_h - 1) / TILE_S;
+    if (spr_r0 < 0) spr_r0 = 0;
+    if (spr_r1 >= ROWS) spr_r1 = ROWS - 1;
+  }
+
   for (int row = 0; row < ROWS; row++) {
+    for (int i = 0; i < SCREEN_W * TILE_S; i++)
+      row_buf[i] = bg;
+
     for (int col = start_col; col <= end_col; col++) {
       uint8_t tile = pgm_read_byte(&level_map[row][col]);
-      if (tile == 0) {
-        int sx = col * TILE_S - cam_x;
-        int sy = row * TILE_S;
-        if (sx + TILE_S <= 0 || sx >= (int)SCREEN_W ||
-            sy + TILE_S <= 0 || sy >= (int)SCREEN_H)
-          continue;
-        tft.fillRect(sx, sy, TILE_S, TILE_S, BG_COLOR);
+      if (tile == 0)
         continue;
+
+      const uint16_t *td = tile_for(tile);
+      int tile_sx = col * TILE_S - cam_x;
+
+      for (int ty = 0; ty < TILE_S; ty++) {
+        int ry = ty * SCREEN_W;
+        for (int tx = 0; tx < TILE_S; tx++) {
+          int sx = tile_sx + tx;
+          if (sx < 0 || sx >= (int)SCREEN_W)
+            continue;
+          uint16_t px = td[ty * TILE_S + tx];
+          if (px == 0x0000)
+            continue;
+          row_buf[ry + sx] = px;
+        }
       }
-      draw_tile(tile, col, row, cam_x);
     }
+
+    if (has_sprite && row >= spr_r0 && row <= spr_r1) {
+      int row_top = row * TILE_S;
+      int row_bot = row_top + TILE_S;
+      for (int sy = 0; sy < spr_h; sy++) {
+        int screen_y = spr_y + sy;
+        if (screen_y < row_top) continue;
+        if (screen_y >= row_bot) break;
+        int buf_row = (screen_y - row_top) * SCREEN_W;
+        for (int sx = 0; sx < spr_w; sx++) {
+          int buf_x = spr_x + sx;
+          if (buf_x < 0 || buf_x >= (int)SCREEN_W)
+            continue;
+          uint16_t px = sprite[sy * spr_w + sx];
+          if (px == 0x0000)
+            continue;
+          row_buf[buf_row + buf_x] = px;
+        }
+      }
+    }
+
+    tft.pushImage(0, row * TILE_S, SCREEN_W, TILE_S, row_buf);
   }
 }

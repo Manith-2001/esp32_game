@@ -65,7 +65,7 @@ void setup() {
   tft.setRotation(1);
   tft.fillScreen(BG_COLOR);
   Renderer renderer(tft);
-  renderer.render_visible(level_map, 0);
+  renderer.render_frame(level_map, 0, nullptr, 0, 0, 0, 0);
   xSemaphoreGive(g_simParams.tftMutex);
 
   debug_init();

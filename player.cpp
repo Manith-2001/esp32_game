@@ -1,6 +1,5 @@
 #include "player.h"
 #include "physics.h"
-#include "tiles.h"
 
 Player::Player(TFT_eSPI &tft, float x, float y)
     : tft(tft), x(x), y(y), prev_x(x), prev_y(y), vx(0), vy(0),
@@ -45,8 +44,4 @@ void Player::clampLeft(float left_bound) {
     x = left_bound;
     vx = 0;
   }
-}
-
-void Player::draw(int cam_x) {
-  tft.fillRect((int)(x - cam_x), (int)y, W, H, TFT_RED);
 }

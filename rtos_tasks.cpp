@@ -5,7 +5,6 @@
 #include "render.h"
 #include "player.h"
 #include "level.h"
-#include "tiles.h"
 #include "debug.h"
 #include "serial_input.h"
 #include "input.h"
@@ -66,8 +65,14 @@ void simRenderTask(void *pvParameters) {
         player.clampLeft((float)cam_x);
 
         xSemaphoreTake(p.tftMutex, portMAX_DELAY);
-        renderer.render_visible(level_map, cam_x);
-        player.draw(cam_x);
+        {
+          int spr_x = (int)(player.getX() - cam_x) +
+                      (Player::W - Player::SPRITE_W) / 2;
+          int spr_y = (int)player.getY() + Player::H - Player::SPRITE_H;
+          renderer.render_frame(level_map, cam_x, player_sprite,
+                                spr_x, spr_y,
+                                Player::SPRITE_W, Player::SPRITE_H);
+        }
         xSemaphoreGive(p.tftMutex);
 
 #if DEBUG_MODE
