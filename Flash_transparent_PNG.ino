@@ -23,6 +23,7 @@
 #include <PNGdec.h>
 
 // Include image array
+#include "config.h"
 #include "SpongeBob.h"
 #include "assets/piskel.h"
 #include "render.h"
@@ -62,9 +63,9 @@ void setup() {
   xSemaphoreTake(g_simParams.tftMutex, portMAX_DELAY);
   tft.begin();
   tft.setRotation(1);
-  Renderer renderer(tft);
   tft.fillScreen(BG_COLOR);
-  renderer.render_level(level_map);
+  Renderer renderer(tft);
+  renderer.render_visible(level_map, 0);
   xSemaphoreGive(g_simParams.tftMutex);
 
   debug_init();

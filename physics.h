@@ -1,12 +1,13 @@
 #pragma once
 #include <cstdint>
+#include "config.h"
 
 namespace Physics {
-static constexpr uint8_t COLS = 20;
-static constexpr uint8_t ROWS = 15;
-static constexpr uint8_t TILE_S = 16;
+static constexpr uint8_t COLS = LEVEL_COLS;
+static constexpr uint8_t ROWS = LEVEL_ROWS;
+static constexpr uint8_t TILE_S = TILE_SIZE;
 
-// tile index -> solid?  0=empty 1=block 2=grass (solid) 3=cloud (decorative,
+// tile index -> solid?  0=empty 1=block 2=grass (decorative, passable) 3=cloud (decorative, passable)
 // passable)
 static constexpr bool SOLID_TILE[] = {false, true, false, false};
 

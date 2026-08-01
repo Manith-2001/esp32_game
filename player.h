@@ -1,21 +1,22 @@
 #pragma once
 #include "TFT_eSPI.h"
-#include "render.h"
+#include "config.h"
 #include "input.h"
 
 class Player {
 public:
     Player(TFT_eSPI &tft, float x, float y);
 
-    void update(const uint8_t level_map[][20], const InputState &input);
-    void draw();
-    void clear(Renderer &renderer, const uint8_t level_map[][20]);
+    void update(const uint8_t level_map[][LEVEL_COLS], const InputState &input,
+                int cam_left);
+    void draw(int cam_x);
 
     float getX() const     { return x; }
     float getY() const     { return y; }
     float getVX() const    { return vx; }
     float getVY() const    { return vy; }
     bool  isGrounded() const { return grounded; }
+    void  clampLeft(float left_bound);
 
 private:
     static constexpr int W = 10;

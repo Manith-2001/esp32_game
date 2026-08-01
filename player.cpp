@@ -6,7 +6,10 @@ Player::Player(TFT_eSPI &tft, float x, float y)
     : tft(tft), x(x), y(y), prev_x(x), prev_y(y), vx(0), vy(0),
       grounded(false) {}
 
-void Player::update(const uint8_t level_map[][20], const InputState &input) {
+void Player::update(const uint8_t level_map[][LEVEL_COLS],
+                    const InputState &input, int cam_left) {
+  clampLeft((float)cam_left);
+
   float multiplier = grounded ? 1.0f : AIR_CONTROL;
   vx = (input.right - input.left) * SPEED * multiplier;
 
@@ -20,12 +23,10 @@ void Player::update(const uint8_t level_map[][20], const InputState &input) {
   Physics::resolve_x(level_map, x, y, W, H, vx);
   Physics::resolve_y(level_map, x, y, W, H, vy);
 
-  if (x < 0) {
-    x = 0;
-    vx = 0;
-  }
-  if (x + W > (float)tft.width()) {
-    x = tft.width() - W;
+  clampLeft((float)cam_left);
+
+  if (x + W > (float)(LEVEL_COLS * TILE_SIZE)) {
+    x = (float)(LEVEL_COLS * TILE_SIZE) - W;
     vx = 0;
   }
   if (y < 0) {
@@ -39,8 +40,13 @@ void Player::update(const uint8_t level_map[][20], const InputState &input) {
   prev_y = y;
 }
 
-void Player::draw() { tft.fillRect((int)x, (int)y, W, H, TFT_RED); }
+void Player::clampLeft(float left_bound) {
+  if (x < left_bound) {
+    x = left_bound;
+    vx = 0;
+  }
+}
 
-void Player::clear(Renderer &renderer, const uint8_t level_map[][20]) {
-  renderer.render_region(level_map, (int)prev_x, (int)prev_y, W, H);
+void Player::draw(int cam_x) {
+  tft.fillRect((int)(x - cam_x), (int)y, W, H, TFT_RED);
 }

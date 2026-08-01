@@ -9,6 +9,8 @@
 #include "debug.h"
 #include "serial_input.h"
 #include "input.h"
+#include "camera.h"
+#include "config.h"
 
 #include <freertos/task.h>
 
@@ -32,15 +34,15 @@ void inputTask(void *pvParameters) {
 
 // ---------------------------------------------------------------------------
 // Sim + render task: runs on core 1 at a fixed 60 Hz cadence.
-// Drains the latest input, clears the old player rectangle, updates physics,
-// draws the new rectangle, and prints debug telemetry.
+// Full visible-viewport redraw each frame — no player-clear pass needed.
 // ---------------------------------------------------------------------------
 void simRenderTask(void *pvParameters) {
     SimParams &p = *(SimParams *)pvParameters;
     TickType_t lastWake = xTaskGetTickCount();
     InputState input{};
-    Player player(tft, 10, 0);
+    Player player(tft, 32, 0);
     Renderer renderer(tft);
+    Camera camera((float)(LEVEL_COLS * TILE_SIZE));
 
     for (;;) {
         // Drain the queue — keep only the most recent InputState.
@@ -56,14 +58,21 @@ void simRenderTask(void *pvParameters) {
         bool  pg  = player.isGrounded();
 #endif
 
+        int cam_x = camera.offset();
+
+        player.update(level_map, input, cam_x);
+        camera.update(player.getX());
+        cam_x = camera.offset();
+        player.clampLeft((float)cam_x);
+
         xSemaphoreTake(p.tftMutex, portMAX_DELAY);
-        player.clear(renderer, level_map);
-        player.update(level_map, input);
-        player.draw();
+        renderer.render_visible(level_map, cam_x);
+        player.draw(cam_x);
         xSemaphoreGive(p.tftMutex);
 
 #if DEBUG_MODE
-        debug_frame(player, level_map, micros() - t0, pvx, pvy, px, py, pg);
+        debug_frame(player, level_map, cam_x, micros() - t0,
+                    pvx, pvy, px, py, pg);
 #endif
 
         vTaskDelayUntil(&lastWake, pdMS_TO_TICKS(16));
