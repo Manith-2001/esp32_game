@@ -4,6 +4,7 @@
 
 #include "player.h"
 #include "physics.h"
+#include "config.h"
 #include <Arduino.h>
 
 static uint8_t g_pending_events = 0;
@@ -12,9 +13,9 @@ void debug_signal(GameEvent event) {
     g_pending_events |= (uint8_t)event;
 }
 
-static constexpr uint8_t COLS = Physics::COLS;
-static constexpr uint8_t ROWS = Physics::ROWS;
-static constexpr uint8_t TILE_S = Physics::TILE_S;
+static constexpr uint8_t COLS = LEVEL_COLS;
+static constexpr uint8_t ROWS = LEVEL_ROWS;
+static constexpr uint8_t TILE_S = TILE_SIZE;
 
 // ---------------------------------------------------------------------------
 // helpers
@@ -113,7 +114,8 @@ void debug_init() {
 static unsigned long g_frame = 0;
 
 void debug_frame(const Player &p, const uint8_t (*level_map)[COLS],
-                 unsigned long dt_us, float prev_vx, float prev_vy,
+                 int cam_x, unsigned long dt_us,
+                 float prev_vx, float prev_vy,
                  float prev_x, float prev_y, bool prev_grounded) {
 
     g_frame++;
@@ -176,6 +178,7 @@ void debug_frame(const Player &p, const uint8_t (*level_map)[COLS],
         float fps = 1000000.0f / (float)dt_us;
         Serial.printf(" %5.1ffps", fps);
     }
+    Serial.printf(" cam=%d", cam_x);
     Serial.println();
 #endif
 
@@ -187,7 +190,7 @@ void debug_frame(const Player &p, const uint8_t (*level_map)[COLS],
         if (hit.found) {
             Serial.printf("[F%5lu] *** WALL: %+.2f→%+.2f | right(%d) hits tile(%d,%d)=%s\n",
                           g_frame, prev_vx, vx, edge_x, hit.col, hit.row,
-                          hit.type == 0xFF ? "SCREEN" : tile_name(hit.type));
+                          hit.type == 0xFF ? "LEVEL EDGE" : tile_name(hit.type));
         }
     } else if (vx_halted && prev_vx < -0.1f) {
         int edge_x = (int)x - 1;
@@ -195,7 +198,7 @@ void debug_frame(const Player &p, const uint8_t (*level_map)[COLS],
         if (hit.found) {
             Serial.printf("[F%5lu] *** WALL: %+.2f→%+.2f | left(%d) hits tile(%d,%d)=%s\n",
                           g_frame, prev_vx, vx, edge_x, hit.col, hit.row,
-                          hit.type == 0xFF ? "SCREEN" : tile_name(hit.type));
+                          hit.type == 0xFF ? "LEVEL EDGE" : tile_name(hit.type));
         }
     }
 
@@ -205,7 +208,7 @@ void debug_frame(const Player &p, const uint8_t (*level_map)[COLS],
         if (hit.found) {
             Serial.printf("[F%5lu] *** LAND: %+.2f→%+.2f | bot(%d) hits tile(%d,%d)=%s\n",
                           g_frame, prev_vy, vy, edge_y, hit.col, hit.row,
-                          hit.type == 0xFF ? "SCREEN" : tile_name(hit.type));
+                          hit.type == 0xFF ? "LEVEL EDGE" : tile_name(hit.type));
         }
     }
 
@@ -215,7 +218,7 @@ void debug_frame(const Player &p, const uint8_t (*level_map)[COLS],
         if (hit.found) {
             Serial.printf("[F%5lu] *** CEIL: %+.2f→%+.2f | top(%d) hits tile(%d,%d)=%s\n",
                           g_frame, prev_vy, vy, edge_y, hit.col, hit.row,
-                          hit.type == 0xFF ? "SCREEN" : tile_name(hit.type));
+                          hit.type == 0xFF ? "LEVEL EDGE" : tile_name(hit.type));
         }
     }
 

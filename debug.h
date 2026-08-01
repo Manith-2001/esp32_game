@@ -23,6 +23,7 @@
 #endif
 
 #include <cstdint>
+#include "config.h"
 
 class Player;
 
@@ -38,11 +39,12 @@ enum GameEvent : uint8_t {
 
 void debug_init();
 void debug_signal(GameEvent event);
-void debug_frame(const Player &p, const uint8_t level_map[][20],
-                 unsigned long dt_us, float prev_vx, float prev_vy,
+void debug_frame(const Player &p, const uint8_t level_map[][LEVEL_COLS],
+                 int cam_x, unsigned long dt_us,
+                 float prev_vx, float prev_vy,
                  float prev_x, float prev_y, bool prev_grounded);
 #else
 #define debug_init() ((void)0)
 #define debug_signal(ev) ((void)0)
-#define debug_frame(p, lm, dt, pvx, pvy, px, py, pg) ((void)0)
+#define debug_frame(p, lm, cam_x, dt, pvx, pvy, px, py, pg) ((void)0)
 #endif
