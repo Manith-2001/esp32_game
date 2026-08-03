@@ -64,6 +64,9 @@ void setup() {
   tft.begin();
   tft.setRotation(1);
   tft.fillScreen(BG_COLOR);
+  if (!tft.initDMA()) {
+    Serial.println("TFT DMA init failed");
+  }
   Renderer renderer(tft);
   renderer.render_frame(level_map, 0, nullptr, 0, 0, 0, 0);
   xSemaphoreGive(g_simParams.tftMutex);

@@ -21,7 +21,7 @@ const uint16_t *Renderer::tile_for(uint8_t index) {
 void Renderer::render_frame(const uint8_t level_map[][LEVEL_COLS], int cam_x,
                              const uint16_t *sprite, int spr_x, int spr_y,
                              int spr_w, int spr_h) {
-  static uint16_t row_buf[SCREEN_W * TILE_S];
+  static uint16_t row_buf[2][SCREEN_W * TILE_S];
 
   int start_col = cam_x / TILE_S;
   int end_col = (cam_x + SCREEN_W - 1) / TILE_S;
@@ -39,9 +39,12 @@ void Renderer::render_frame(const uint8_t level_map[][LEVEL_COLS], int cam_x,
     if (spr_r1 >= ROWS) spr_r1 = ROWS - 1;
   }
 
+  tft.startWrite();
+
   for (int row = 0; row < ROWS; row++) {
+    uint16_t *pixels = row_buf[row & 1];
     for (int i = 0; i < SCREEN_W * TILE_S; i++)
-      row_buf[i] = bg;
+      pixels[i] = bg;
 
     for (int col = start_col; col <= end_col; col++) {
       uint8_t tile = pgm_read_byte(&level_map[row][col]);
@@ -60,7 +63,7 @@ void Renderer::render_frame(const uint8_t level_map[][LEVEL_COLS], int cam_x,
           uint16_t px = td[ty * TILE_S + tx];
           if (px == 0x0000)
             continue;
-          row_buf[ry + sx] = px;
+          pixels[ry + sx] = px;
         }
       }
     }
@@ -80,11 +83,14 @@ void Renderer::render_frame(const uint8_t level_map[][LEVEL_COLS], int cam_x,
           uint16_t px = sprite[sy * spr_w + sx];
           if (px == 0x0000)
             continue;
-          row_buf[buf_row + buf_x] = px;
+          pixels[buf_row + buf_x] = px;
         }
       }
     }
 
-    tft.pushImage(0, row * TILE_S, SCREEN_W, TILE_S, row_buf);
+    tft.pushImageDMA(0, row * TILE_S, SCREEN_W, TILE_S,
+                     static_cast<const uint16_t *>(pixels));
   }
+
+  tft.endWrite();
 }
