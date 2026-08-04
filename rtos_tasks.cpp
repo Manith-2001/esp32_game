@@ -10,6 +10,7 @@
 #include "input.h"
 #include "camera.h"
 #include "config.h"
+#include "game_state.h"
 
 #include <freertos/task.h>
 
@@ -39,15 +40,34 @@ void simRenderTask(void *pvParameters) {
     SimParams &p = *(SimParams *)pvParameters;
     TickType_t lastWake = xTaskGetTickCount();
     InputState input{};
-    Player player(tft, 32, 0);
+    static constexpr float SPAWN_X = 32.0f;
+    static constexpr float SPAWN_Y = 0.0f;
+    Player player(tft, SPAWN_X, SPAWN_Y);
     Renderer renderer(tft);
     Camera camera((float)(LEVEL_COLS * TILE_SIZE));
+    GameState game_state;
+
+    Serial.printf("[GAME] Started with %u lives.\n",
+                  (unsigned)game_state.lives());
 
     for (;;) {
         // Drain the queue — keep only the most recent InputState.
         InputState tmp;
         while (xQueueReceive(p.inputQueue, &tmp, 0) == pdTRUE) {
             input = tmp;
+        }
+
+        if (game_state.isGameOver()) {
+            if (input.jump) {
+                game_state.reset();
+                camera.reset();
+                player.respawn(SPAWN_X, SPAWN_Y);
+                Serial.printf("[GAME] Restarted with %u lives.\n",
+                              (unsigned)game_state.lives());
+            } else {
+                vTaskDelayUntil(&lastWake, pdMS_TO_TICKS(16));
+                continue;
+            }
         }
 
 #if DEBUG_MODE
@@ -60,24 +80,45 @@ void simRenderTask(void *pvParameters) {
         int cam_x = camera.offset();
 
         player.update(level_map, input, cam_x);
-        camera.update(player.getX());
-        cam_x = camera.offset();
-        player.clampLeft((float)cam_x);
+        bool pit_death = false;
 
-        xSemaphoreTake(p.tftMutex, portMAX_DELAY);
-        {
-          int spr_x = (int)(player.getX() - cam_x) +
-                      (Player::W - Player::SPRITE_W) / 2;
-          int spr_y = (int)player.getY() + Player::H - Player::SPRITE_H;
-          renderer.render_frame(level_map, cam_x, player_sprite,
-                                spr_x, spr_y,
-                                Player::SPRITE_W, Player::SPRITE_H);
+        if (player.getY() + Player::H >= (float)SCREEN_H) {
+            pit_death = true;
+            game_state.loseLife();
+            Serial.printf("[GAME] PIT: life lost, %u lives remaining.\n",
+                          (unsigned)game_state.lives());
+
+            if (game_state.isGameOver()) {
+                Serial.println("[GAME] GAME OVER. Press 'w' to restart.");
+            } else {
+                // Keep the camera where the player died and drop them back in
+                // from above the current viewport.
+                player.respawn((float)cam_x, SPAWN_Y);
+            }
         }
-        xSemaphoreGive(p.tftMutex);
+
+        if (!game_state.isGameOver()) {
+            camera.update(player.getX());
+            cam_x = camera.offset();
+            player.clampLeft((float)cam_x);
+
+            xSemaphoreTake(p.tftMutex, portMAX_DELAY);
+            {
+              int spr_x = (int)(player.getX() - cam_x) +
+                          (Player::W - Player::SPRITE_W) / 2;
+              int spr_y = (int)player.getY() + Player::H - Player::SPRITE_H;
+              renderer.render_frame(level_map, cam_x, player_sprite,
+                                    spr_x, spr_y,
+                                    Player::SPRITE_W, Player::SPRITE_H);
+            }
+            xSemaphoreGive(p.tftMutex);
+        }
 
 #if DEBUG_MODE
-        debug_frame(player, level_map, cam_x, micros() - t0,
-                    pvx, pvy, px, py, pg);
+        if (!game_state.isGameOver() && !pit_death) {
+            debug_frame(player, level_map, cam_x, micros() - t0,
+                        pvx, pvy, px, py, pg);
+        }
 #endif
 
         vTaskDelayUntil(&lastWake, pdMS_TO_TICKS(16));
