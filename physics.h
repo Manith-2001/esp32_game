@@ -7,8 +7,9 @@ static constexpr uint8_t COLS = LEVEL_COLS;
 static constexpr uint8_t ROWS = LEVEL_ROWS;
 static constexpr uint8_t TILE_S = TILE_SIZE;
 
-// tile index -> solid?  0=empty 1=block 2=grass (decorative, passable) 3=cloud (decorative, passable)
-// passable)
+// Tile index -> solid? 0=empty, 1=block, 2=grass (decorative, passable),
+// 3=cloud (decorative, passable). Below-level space is not solid so pits can
+// be detected by the game state.
 static constexpr bool SOLID_TILE[] = {false, true, false, false};
 
 bool tile_is_solid(uint8_t tile_index);

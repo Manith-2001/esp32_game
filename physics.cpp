@@ -9,7 +9,7 @@ bool Physics::is_solid(const uint8_t level_map[][COLS], int px, int py) {
     if (px < 0 || px >= COLS * TILE_S || py < 0)
         return false;
     if (py >= ROWS * TILE_S)
-        return true;
+        return false;
     uint8_t col = px / TILE_S;
     uint8_t row = py / TILE_S;
     uint8_t t = pgm_read_byte(&level_map[row][col]);
@@ -20,7 +20,6 @@ bool Physics::check_ground(const uint8_t level_map[][COLS], float x, float y, in
     int left = (int)x;
     int right = (int)(x + w - 1);
     int bottom = (int)(y + h);
-    if (bottom >= ROWS * TILE_S) return true;
     for (int px = left; px <= right; px++) {
         if (is_solid(level_map, px, bottom)) return true;
     }

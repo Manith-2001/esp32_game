@@ -11,7 +11,7 @@
 //   DEBUG_COLLISION  — detailed report when velocity changes (what tile hit)
 //
 // Output format legend:
-//   .=empty  B=block  G=grass  C=cloud  #=OOB  ==screen bottom ground
+//   .=empty  B=block  G=grass  C=cloud  #=OOB  ==below-level death edge
 // ==========================================================================
 
 #define DEBUG_MODE 1

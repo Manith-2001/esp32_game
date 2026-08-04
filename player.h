@@ -15,6 +15,7 @@ public:
 
     void update(const uint8_t level_map[][LEVEL_COLS], const InputState &input,
                 int cam_left);
+    void respawn(float spawn_x, float spawn_y);
 
     float getX() const     { return x; }
     float getY() const     { return y; }
@@ -27,7 +28,9 @@ private:
     static constexpr float GRAVITY = 0.65f;
     static constexpr float MAX_VY = 14.0f;
     static constexpr float SPEED = 2.0f;
-    static constexpr float JUMP_VELOCITY = 8.0f;
+    static constexpr float JUMP_VELOCITY = 9.0f;
+    static constexpr float GROUND_ACCELERATION = 0.4f;
+    static constexpr float GROUND_FRICTION = 0.4f;
     static constexpr float AIR_CONTROL = 0.7f;
 
     TFT_eSPI &tft;
