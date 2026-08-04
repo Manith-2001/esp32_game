@@ -12,6 +12,7 @@
 #include "config.h"
 #include "game_state.h"
 
+#include <cstdint>
 #include <freertos/task.h>
 
 // The TFT instance lives in the main sketch (Flash_transparent_PNG.ino).
@@ -42,6 +43,7 @@ void simRenderTask(void *pvParameters) {
     InputState input{};
     static constexpr float SPAWN_X = 32.0f;
     static constexpr float SPAWN_Y = 0.0f;
+    static constexpr uint32_t BLINK_INTERVAL_MS = 100;
     Player player(tft, SPAWN_X, SPAWN_Y);
     Renderer renderer(tft);
     Camera camera((float)(LEVEL_COLS * TILE_SIZE));
@@ -70,6 +72,9 @@ void simRenderTask(void *pvParameters) {
             }
         }
 
+        const uint32_t now_ms = (uint32_t)millis();
+        bool invulnerable = game_state.isInvulnerable(now_ms);
+
 #if DEBUG_MODE
         unsigned long t0 = micros();
         float pvx = player.getVX(), pvy = player.getVY();
@@ -79,21 +84,24 @@ void simRenderTask(void *pvParameters) {
 
         int cam_x = camera.offset();
 
-        player.update(level_map, input, cam_x);
-        bool pit_death = false;
+        player.update(level_map, input, cam_x, invulnerable);
+        bool pit_contact = false;
 
         if (player.getY() + Player::H >= (float)SCREEN_H) {
-            pit_death = true;
-            game_state.loseLife();
-            Serial.printf("[GAME] PIT: life lost, %u lives remaining.\n",
-                          (unsigned)game_state.lives());
+            pit_contact = true;
 
-            if (game_state.isGameOver()) {
-                Serial.println("[GAME] GAME OVER. Press 'w' to restart.");
-            } else {
-                // Keep the camera where the player died and drop them back in
-                // from above the current viewport.
-                player.respawn((float)cam_x, SPAWN_Y);
+            if (game_state.loseLife(now_ms)) {
+                Serial.printf("[GAME] PIT: life lost, %u lives remaining.\n",
+                              (unsigned)game_state.lives());
+
+                if (game_state.isGameOver()) {
+                    Serial.println("[GAME] GAME OVER. Press 'w' to restart.");
+                } else {
+                    // Keep the camera where the player died and drop them back
+                    // in from above the current viewport.
+                    player.respawn((float)cam_x, SPAWN_Y);
+                    invulnerable = game_state.isInvulnerable(now_ms);
+                }
             }
         }
 
@@ -107,7 +115,11 @@ void simRenderTask(void *pvParameters) {
               int spr_x = (int)(player.getX() - cam_x) +
                           (Player::W - Player::SPRITE_W) / 2;
               int spr_y = (int)player.getY() + Player::H - Player::SPRITE_H;
-              renderer.render_frame(level_map, cam_x, player_sprite,
+              const bool show_player =
+                  !invulnerable ||
+                  ((now_ms / BLINK_INTERVAL_MS) % 2U == 0U);
+              const uint16_t *sprite = show_player ? player_sprite : nullptr;
+              renderer.render_frame(level_map, cam_x, sprite,
                                     spr_x, spr_y,
                                     Player::SPRITE_W, Player::SPRITE_H);
             }
@@ -115,7 +127,7 @@ void simRenderTask(void *pvParameters) {
         }
 
 #if DEBUG_MODE
-        if (!game_state.isGameOver() && !pit_death) {
+        if (!game_state.isGameOver() && !pit_contact) {
             debug_frame(player, level_map, cam_x, micros() - t0,
                         pvx, pvy, px, py, pg);
         }

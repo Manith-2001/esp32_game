@@ -16,7 +16,8 @@ void Player::respawn(float spawn_x, float spawn_y) {
 }
 
 void Player::update(const uint8_t level_map[][LEVEL_COLS],
-                    const InputState &input, int cam_left) {
+                    const InputState &input, int cam_left,
+                    bool allow_pit_escape) {
   clampLeft((float)cam_left);
 
   const int direction = (input.right ? 1 : 0) - (input.left ? 1 : 0);
@@ -53,7 +54,12 @@ void Player::update(const uint8_t level_map[][LEVEL_COLS],
   if (vy > MAX_VY)
     vy = MAX_VY;
 
-  Physics::resolve_x(level_map, x, y, W, H, vx);
+  const bool at_pit_bottom =
+      allow_pit_escape && y + H >= (float)SCREEN_H;
+  if (!at_pit_bottom)
+    Physics::resolve_x(level_map, x, y, W, H, vx);
+  else
+    x += vx;
   Physics::resolve_y(level_map, x, y, W, H, vy);
 
   clampLeft((float)cam_left);
@@ -65,6 +71,23 @@ void Player::update(const uint8_t level_map[][LEVEL_COLS],
   if (y < 0) {
     y = 0;
     vy = 0;
+  }
+
+  if (allow_pit_escape && y + H >= (float)SCREEN_H) {
+    // Keep protected players visible and let them run across the pit floor.
+    y = (float)(SCREEN_H - H);
+    vy = 0;
+
+    // If they reach the solid bottom row, lift them onto its top surface so
+    // the normal collision system can take over on the next frame.
+    const int left = (int)x;
+    const int right = (int)(x + W - 1);
+    for (int px = left; px <= right; px++) {
+      if (Physics::is_solid(level_map, px, SCREEN_H - 1)) {
+        y = (float)(SCREEN_H - TILE_SIZE - H);
+        break;
+      }
+    }
   }
 
   grounded = Physics::check_ground(level_map, x, y, W, H);

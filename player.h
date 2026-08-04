@@ -14,7 +14,7 @@ public:
     Player(TFT_eSPI &tft, float x, float y);
 
     void update(const uint8_t level_map[][LEVEL_COLS], const InputState &input,
-                int cam_left);
+                int cam_left, bool allow_pit_escape);
     void respawn(float spawn_x, float spawn_y);
 
     float getX() const     { return x; }
