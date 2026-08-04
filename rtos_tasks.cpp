@@ -11,6 +11,7 @@
 #include "camera.h"
 #include "config.h"
 #include "game_state.h"
+#include "spawn.h"
 
 #include <cstdint>
 #include <freertos/task.h>
@@ -41,10 +42,10 @@ void simRenderTask(void *pvParameters) {
     SimParams &p = *(SimParams *)pvParameters;
     TickType_t lastWake = xTaskGetTickCount();
     InputState input{};
-    static constexpr float SPAWN_X = 32.0f;
-    static constexpr float SPAWN_Y = 0.0f;
+    const SpawnPoint initial_spawn{32.0f, 0.0f};
     static constexpr uint32_t BLINK_INTERVAL_MS = 100;
-    Player player(tft, SPAWN_X, SPAWN_Y);
+    SpawnManager spawn_manager(initial_spawn);
+    Player player(tft, initial_spawn.x, initial_spawn.y);
     Renderer renderer(tft);
     Camera camera((float)(LEVEL_COLS * TILE_SIZE));
     GameState game_state;
@@ -63,7 +64,7 @@ void simRenderTask(void *pvParameters) {
             if (input.jump) {
                 game_state.reset();
                 camera.reset();
-                player.respawn(SPAWN_X, SPAWN_Y);
+                player.respawn(spawn_manager.initial());
                 Serial.printf("[GAME] Restarted with %u lives.\n",
                               (unsigned)game_state.lives());
             } else {
@@ -85,21 +86,24 @@ void simRenderTask(void *pvParameters) {
         int cam_x = camera.offset();
 
         player.update(level_map, input, cam_x, invulnerable);
-        bool pit_contact = false;
+        const bool pit_contact =
+            player.getY() + Player::H >= (float)SCREEN_H;
+        // Future enemy hits should join this same death transition.
+        const bool death_detected = pit_contact;
 
-        if (player.getY() + Player::H >= (float)SCREEN_H) {
-            pit_contact = true;
-
+        if (death_detected) {
+            const float death_x = player.getX();
             if (game_state.loseLife(now_ms)) {
-                Serial.printf("[GAME] PIT: life lost, %u lives remaining.\n",
+                Serial.printf("[GAME] DEATH: life lost, %u lives remaining.\n",
                               (unsigned)game_state.lives());
 
                 if (game_state.isGameOver()) {
                     Serial.println("[GAME] GAME OVER. Press 'w' to restart.");
                 } else {
-                    // Keep the camera where the player died and drop them back
-                    // in from above the current viewport.
-                    player.respawn((float)cam_x, SPAWN_Y);
+                    SpawnPoint spawn = spawn_manager.respawnBehind(
+                        level_map, death_x, initial_spawn.y, Player::W);
+                    player.respawn(spawn);
+                    camera.focusOn(spawn.x);
                     invulnerable = game_state.isInvulnerable(now_ms);
                 }
             }

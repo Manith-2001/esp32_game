@@ -3,6 +3,7 @@
 #include "config.h"
 #include "input.h"
 #include "player_sprite.h"
+#include "spawn.h"
 
 class Player {
 public:
@@ -15,7 +16,7 @@ public:
 
     void update(const uint8_t level_map[][LEVEL_COLS], const InputState &input,
                 int cam_left, bool allow_pit_escape);
-    void respawn(float spawn_x, float spawn_y);
+    void respawn(const SpawnPoint &spawn);
 
     float getX() const     { return x; }
     float getY() const     { return y; }

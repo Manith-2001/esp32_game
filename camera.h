@@ -6,6 +6,7 @@ public:
   Camera(float level_w_px);
 
   void update(float player_x);
+  void focusOn(float player_x);
   void reset();
   int offset() const;
 

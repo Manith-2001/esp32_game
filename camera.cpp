@@ -19,6 +19,15 @@ void Camera::update(float player_x) {
     cam_x = max_cam_x;
 }
 
+void Camera::focusOn(float player_x) {
+  cam_x = player_x - SCREEN_W * FOLLOW_FRACTION;
+
+  if (cam_x < 0)
+    cam_x = 0;
+  if (cam_x > max_cam_x)
+    cam_x = max_cam_x;
+}
+
 void Camera::reset() {
   cam_x = 0;
 }

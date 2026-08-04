@@ -5,9 +5,9 @@ Player::Player(TFT_eSPI &tft, float x, float y)
     : tft(tft), x(x), y(y), prev_x(x), prev_y(y), vx(0), vy(0),
       grounded(false) {}
 
-void Player::respawn(float spawn_x, float spawn_y) {
-  x = spawn_x;
-  y = spawn_y;
+void Player::respawn(const SpawnPoint &spawn) {
+  x = spawn.x;
+  y = spawn.y;
   prev_x = x;
   prev_y = y;
   vx = 0;
