@@ -5,6 +5,7 @@
 #include "render.h"
 #include "player.h"
 #include "goomba.h"
+#include "goomba_manager.h"
 #include "goomba_sprite.h"
 #include "level.h"
 #include "debug.h"
@@ -20,6 +21,19 @@
 
 // The TFT instance lives in the main sketch (Flash_transparent_PNG.ino).
 extern TFT_eSPI tft;
+
+static void log_goomba_spawns(const GoombaManager &goombas) {
+    Serial.printf("[ENEMY] Spawned %u Goombas.\n",
+                  (unsigned)goombas.count());
+
+    for (uint8_t i = 0; i < goombas.count(); i++) {
+        const Goomba &goomba = goombas.at(i);
+        Serial.printf("[ENEMY] #%u at (%d,%d).\n",
+                      (unsigned)i,
+                      (int)goomba.getX(),
+                      (int)goomba.getY());
+    }
+}
 
 // ---------------------------------------------------------------------------
 // Input task: runs on core 0, polls serial input and pushes the latest
@@ -45,20 +59,20 @@ void simRenderTask(void *pvParameters) {
     TickType_t lastWake = xTaskGetTickCount();
     InputState input{};
     const SpawnPoint initial_spawn{32.0f, 0.0f};
-    static constexpr uint8_t GOOMBA_SPAWN_COLUMN = 10;
-    const SpawnPoint goomba_spawn{
-        static_cast<float>(GOOMBA_SPAWN_COLUMN * TILE_SIZE),
-        static_cast<float>((LEVEL_ROWS - 1) * TILE_SIZE - Goomba::H)};
     static constexpr uint32_t BLINK_INTERVAL_MS = 100;
     SpawnManager spawn_manager(initial_spawn);
     Player player(tft, initial_spawn.x, initial_spawn.y);
-    Goomba goomba(goomba_spawn.x, goomba_spawn.y);
+    GoombaManager goombas;
     Renderer renderer(tft);
     Camera camera((float)(LEVEL_COLS * TILE_SIZE));
     GameState game_state;
 
+    randomSeed(static_cast<unsigned long>(micros()));
+    goombas.randomize(level_map, initial_spawn.x);
+
     Serial.printf("[GAME] Started with %u lives.\n",
                   (unsigned)game_state.lives());
+    log_goomba_spawns(goombas);
 
     for (;;) {
         // Drain the queue — keep only the most recent InputState.
@@ -72,9 +86,10 @@ void simRenderTask(void *pvParameters) {
                 game_state.reset();
                 camera.reset();
                 player.respawn(spawn_manager.initial());
-                goomba.reset();
+                goombas.randomize(level_map, initial_spawn.x);
                 Serial.printf("[GAME] Restarted with %u lives.\n",
                               (unsigned)game_state.lives());
+                log_goomba_spawns(goombas);
             } else {
                 vTaskDelayUntil(&lastWake, pdMS_TO_TICKS(16));
                 continue;
@@ -94,32 +109,53 @@ void simRenderTask(void *pvParameters) {
         int cam_x = camera.offset();
 
         player.update(level_map, input, cam_x, invulnerable);
-        goomba.update(level_map);
+        for (uint8_t i = 0; i < goombas.count(); i++)
+            goombas.at(i).update(level_map);
 
         bool goomba_contact = false;
+        int stomped_index = -1;
 
-        if (goomba.isAlive()) {
-            const bool stomped = goomba.isStompedBy(
+        // Resolve stomps first so a stomp always wins over side contact with
+        // another Goomba in the same frame.
+        for (uint8_t i = 0; i < goombas.count(); i++) {
+            Goomba &goomba = goombas.at(i);
+            if (!goomba.isAlive())
+                continue;
+
+            if (goomba.isStompedBy(
                 player.getX(),
                 player.getY(),
                 player.getPreviousY(),
                 player.getVY(),
                 Player::W,
-                Player::H);
+                Player::H)) {
+                stomped_index = i;
+                break;
+            }
+        }
 
-            if (stomped) {
-                const float goomba_top = goomba.getY();
+        if (stomped_index >= 0) {
+            Goomba &goomba = goombas.at(static_cast<uint8_t>(stomped_index));
+            const float goomba_top = goomba.getY();
 
-                goomba.stomp();
-                player.bounceFromEnemy(goomba_top);
+            goomba.stomp();
+            player.bounceFromEnemy(goomba_top);
 
-                Serial.println("[ENEMY] GOOMBA STOMPED.");
-            } else {
-                goomba_contact = goomba.collidesWith(
+            Serial.println("[ENEMY] GOOMBA STOMPED.");
+        } else {
+            for (uint8_t i = 0; i < goombas.count(); i++) {
+                const Goomba &goomba = goombas.at(i);
+                if (!goomba.isAlive())
+                    continue;
+
+                if (goomba.collidesWith(
                     player.getX(),
                     player.getY(),
                     Player::W,
-                    Player::H);
+                    Player::H)) {
+                    goomba_contact = true;
+                    break;
+                }
             }
         }
 
@@ -159,10 +195,14 @@ void simRenderTask(void *pvParameters) {
 
             xSemaphoreTake(p.tftMutex, portMAX_DELAY);
             {
-              RenderSprite sprites[2];
+              RenderSprite sprites[GoombaManager::MAX_GOOMBAS + 1];
               uint8_t sprite_count = 0;
 
-              if (goomba.isAlive()) {
+              for (uint8_t i = 0; i < goombas.count(); i++) {
+                const Goomba &goomba = goombas.at(i);
+                if (!goomba.isAlive())
+                    continue;
+
                 sprites[sprite_count++] = {
                     goomba_sprite,
                     (int)(goomba.getX() - cam_x) +

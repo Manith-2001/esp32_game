@@ -12,13 +12,19 @@ Goomba::Goomba(float spawn_x, float spawn_y)
       vy(0.0f),
       alive(true) {}
 
-void Goomba::reset() {
-    x = spawn_x;
-    y = spawn_y;
-    previous_y = spawn_y;
+void Goomba::spawnAt(float new_spawn_x, float new_spawn_y) {
+    spawn_x = new_spawn_x;
+    spawn_y = new_spawn_y;
+    x = new_spawn_x;
+    y = new_spawn_y;
+    previous_y = new_spawn_y;
     vx = SPEED;
     vy = 0.0f;
     alive = true;
+}
+
+void Goomba::reset() {
+    spawnAt(spawn_x, spawn_y);
 }
 
 void Goomba::stomp() {

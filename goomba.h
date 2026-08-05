@@ -11,9 +11,10 @@ public:
     static constexpr int SPRITE_W = 16;
     static constexpr int SPRITE_H = 16;
 
-    explicit Goomba(float spawn_x, float spawn_y);
+    explicit Goomba(float spawn_x = 0.0f, float spawn_y = 0.0f);
 
     void update(const uint8_t level_map[][LEVEL_COLS]);
+    void spawnAt(float spawn_x, float spawn_y);
     void reset();
     void stomp();
 
