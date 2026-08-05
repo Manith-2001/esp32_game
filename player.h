@@ -17,9 +17,11 @@ public:
     void update(const uint8_t level_map[][LEVEL_COLS], const InputState &input,
                 int cam_left, bool allow_pit_escape);
     void respawn(const SpawnPoint &spawn);
+    void bounceFromEnemy(float enemy_top);
 
     float getX() const     { return x; }
     float getY() const     { return y; }
+    float getPreviousY() const { return prev_y; }
     float getVX() const    { return vx; }
     float getVY() const    { return vy; }
     bool  isGrounded() const { return grounded; }
@@ -30,6 +32,7 @@ private:
     static constexpr float MAX_VY = 14.0f;
     static constexpr float SPEED = 2.0f;
     static constexpr float JUMP_VELOCITY = 9.0f;
+    static constexpr float STOMP_BOUNCE_VELOCITY = 6.0f;
     static constexpr float GROUND_ACCELERATION = 0.4f;
     static constexpr float GROUND_FRICTION = 0.4f;
     static constexpr float AIR_CONTROL = 0.7f;

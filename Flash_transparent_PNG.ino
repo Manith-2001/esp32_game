@@ -68,7 +68,7 @@ void setup() {
     Serial.println("TFT DMA init failed");
   }
   Renderer renderer(tft);
-  renderer.render_frame(level_map, 0, nullptr, 0, 0, 0, 0);
+  renderer.render_frame(level_map, 0, nullptr, 0);
   xSemaphoreGive(g_simParams.tftMutex);
 
   debug_init();

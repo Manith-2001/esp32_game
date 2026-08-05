@@ -4,12 +4,19 @@
 #include <cstdint>
 #include "config.h"
 
+struct RenderSprite {
+  const uint16_t *pixels;
+  int x;
+  int y;
+  int width;
+  int height;
+};
+
 class Renderer {
 public:
   Renderer(TFT_eSPI &tft);
   void render_frame(const uint8_t level_map[][LEVEL_COLS], int cam_x,
-                    const uint16_t *sprite, int spr_x, int spr_y,
-                    int spr_w, int spr_h);
+                    const RenderSprite *sprites, uint8_t sprite_count);
 
 private:
   static constexpr uint8_t COLS = LEVEL_COLS;

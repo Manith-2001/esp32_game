@@ -4,6 +4,8 @@
 #include "TFT_eSPI.h"
 #include "render.h"
 #include "player.h"
+#include "goomba.h"
+#include "goomba_sprite.h"
 #include "level.h"
 #include "debug.h"
 #include "serial_input.h"
@@ -43,9 +45,14 @@ void simRenderTask(void *pvParameters) {
     TickType_t lastWake = xTaskGetTickCount();
     InputState input{};
     const SpawnPoint initial_spawn{32.0f, 0.0f};
+    static constexpr uint8_t GOOMBA_SPAWN_COLUMN = 10;
+    const SpawnPoint goomba_spawn{
+        static_cast<float>(GOOMBA_SPAWN_COLUMN * TILE_SIZE),
+        static_cast<float>((LEVEL_ROWS - 1) * TILE_SIZE - Goomba::H)};
     static constexpr uint32_t BLINK_INTERVAL_MS = 100;
     SpawnManager spawn_manager(initial_spawn);
     Player player(tft, initial_spawn.x, initial_spawn.y);
+    Goomba goomba(goomba_spawn.x, goomba_spawn.y);
     Renderer renderer(tft);
     Camera camera((float)(LEVEL_COLS * TILE_SIZE));
     GameState game_state;
@@ -65,6 +72,7 @@ void simRenderTask(void *pvParameters) {
                 game_state.reset();
                 camera.reset();
                 player.respawn(spawn_manager.initial());
+                goomba.reset();
                 Serial.printf("[GAME] Restarted with %u lives.\n",
                               (unsigned)game_state.lives());
             } else {
@@ -86,15 +94,50 @@ void simRenderTask(void *pvParameters) {
         int cam_x = camera.offset();
 
         player.update(level_map, input, cam_x, invulnerable);
+        goomba.update(level_map);
+
+        bool goomba_contact = false;
+
+        if (goomba.isAlive()) {
+            const bool stomped = goomba.isStompedBy(
+                player.getX(),
+                player.getY(),
+                player.getPreviousY(),
+                player.getVY(),
+                Player::W,
+                Player::H);
+
+            if (stomped) {
+                const float goomba_top = goomba.getY();
+
+                goomba.stomp();
+                player.bounceFromEnemy(goomba_top);
+
+                Serial.println("[ENEMY] GOOMBA STOMPED.");
+            } else {
+                goomba_contact = goomba.collidesWith(
+                    player.getX(),
+                    player.getY(),
+                    Player::W,
+                    Player::H);
+            }
+        }
+
         const bool pit_contact =
             player.getY() + Player::H >= (float)SCREEN_H;
-        // Future enemy hits should join this same death transition.
-        const bool death_detected = pit_contact;
+        // Invulnerable players may overlap an enemy without losing another
+        // life during the protection window.
+        const bool death_detected =
+            pit_contact || (goomba_contact && !invulnerable);
 
         if (death_detected) {
             const float death_x = player.getX();
+            const char *death_reason =
+                pit_contact ? "PIT" : "GOOMBA";
+
             if (game_state.loseLife(now_ms)) {
-                Serial.printf("[GAME] DEATH: life lost, %u lives remaining.\n",
+                Serial.printf("[GAME] DEATH: %s, life lost, %u lives remaining.\n",
+                              death_reason,
                               (unsigned)game_state.lives());
 
                 if (game_state.isGameOver()) {
@@ -116,16 +159,37 @@ void simRenderTask(void *pvParameters) {
 
             xSemaphoreTake(p.tftMutex, portMAX_DELAY);
             {
-              int spr_x = (int)(player.getX() - cam_x) +
-                          (Player::W - Player::SPRITE_W) / 2;
-              int spr_y = (int)player.getY() + Player::H - Player::SPRITE_H;
+              RenderSprite sprites[2];
+              uint8_t sprite_count = 0;
+
+              if (goomba.isAlive()) {
+                sprites[sprite_count++] = {
+                    goomba_sprite,
+                    (int)(goomba.getX() - cam_x) +
+                        (Goomba::W - Goomba::SPRITE_W) / 2,
+                    (int)goomba.getY() +
+                        Goomba::H - Goomba::SPRITE_H,
+                    Goomba::SPRITE_W,
+                    Goomba::SPRITE_H};
+              }
+
               const bool show_player =
                   !invulnerable ||
                   ((now_ms / BLINK_INTERVAL_MS) % 2U == 0U);
-              const uint16_t *sprite = show_player ? player_sprite : nullptr;
-              renderer.render_frame(level_map, cam_x, sprite,
-                                    spr_x, spr_y,
-                                    Player::SPRITE_W, Player::SPRITE_H);
+
+              if (show_player) {
+                sprites[sprite_count++] = {
+                    player_sprite,
+                    (int)(player.getX() - cam_x) +
+                        (Player::W - Player::SPRITE_W) / 2,
+                    (int)player.getY() +
+                        Player::H - Player::SPRITE_H,
+                    Player::SPRITE_W,
+                    Player::SPRITE_H};
+              }
+
+              renderer.render_frame(level_map, cam_x,
+                                    sprites, sprite_count);
             }
             xSemaphoreGive(p.tftMutex);
         }

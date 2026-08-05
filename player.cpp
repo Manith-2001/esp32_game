@@ -15,9 +15,22 @@ void Player::respawn(const SpawnPoint &spawn) {
   grounded = false;
 }
 
+void Player::bounceFromEnemy(float enemy_top) {
+  y = enemy_top - H;
+  if (y < 0.0f)
+    y = 0.0f;
+
+  vy = -STOMP_BOUNCE_VELOCITY;
+  grounded = false;
+  prev_y = y;
+}
+
 void Player::update(const uint8_t level_map[][LEVEL_COLS],
                     const InputState &input, int cam_left,
                     bool allow_pit_escape) {
+  prev_x = x;
+  prev_y = y;
+
   clampLeft((float)cam_left);
 
   const int direction = (input.right ? 1 : 0) - (input.left ? 1 : 0);
@@ -91,9 +104,6 @@ void Player::update(const uint8_t level_map[][LEVEL_COLS],
   }
 
   grounded = Physics::check_ground(level_map, x, y, W, H);
-
-  prev_x = x;
-  prev_y = y;
 }
 
 void Player::clampLeft(float left_bound) {

@@ -19,8 +19,8 @@ const uint16_t *Renderer::tile_for(uint8_t index) {
 }
 
 void Renderer::render_frame(const uint8_t level_map[][LEVEL_COLS], int cam_x,
-                             const uint16_t *sprite, int spr_x, int spr_y,
-                             int spr_w, int spr_h) {
+                            const RenderSprite *sprites,
+                            uint8_t sprite_count) {
   static uint16_t row_buf[2][SCREEN_W * TILE_S];
 
   int start_col = cam_x / TILE_S;
@@ -29,15 +29,7 @@ void Renderer::render_frame(const uint8_t level_map[][LEVEL_COLS], int cam_x,
   if (end_col >= COLS) end_col = COLS - 1;
 
   const uint16_t bg = BG_SWAP(BG_COLOR);
-  const bool has_sprite = (sprite != nullptr && spr_w > 0 && spr_h > 0);
-
-  int spr_r0 = 0, spr_r1 = -1;
-  if (has_sprite) {
-    spr_r0 = spr_y / TILE_S;
-    spr_r1 = (spr_y + spr_h - 1) / TILE_S;
-    if (spr_r0 < 0) spr_r0 = 0;
-    if (spr_r1 >= ROWS) spr_r1 = ROWS - 1;
-  }
+  const bool has_sprites = sprites != nullptr && sprite_count > 0;
 
   tft.startWrite();
 
@@ -68,22 +60,59 @@ void Renderer::render_frame(const uint8_t level_map[][LEVEL_COLS], int cam_x,
       }
     }
 
-    if (has_sprite && row >= spr_r0 && row <= spr_r1) {
-      int row_top = row * TILE_S;
-      int row_bot = row_top + TILE_S;
-      for (int sy = 0; sy < spr_h; sy++) {
-        int screen_y = spr_y + sy;
-        if (screen_y < row_top) continue;
-        if (screen_y >= row_bot) break;
-        int buf_row = (screen_y - row_top) * SCREEN_W;
-        for (int sx = 0; sx < spr_w; sx++) {
-          int buf_x = spr_x + sx;
-          if (buf_x < 0 || buf_x >= (int)SCREEN_W)
+    if (has_sprites) {
+      for (uint8_t sprite_index = 0;
+           sprite_index < sprite_count;
+           sprite_index++) {
+        const RenderSprite &sprite = sprites[sprite_index];
+
+        if (sprite.pixels == nullptr ||
+            sprite.width <= 0 ||
+            sprite.height <= 0) {
+          continue;
+        }
+
+        int sprite_row_start = sprite.y / TILE_S;
+        int sprite_row_end =
+            (sprite.y + sprite.height - 1) / TILE_S;
+
+        if (sprite_row_start < 0)
+          sprite_row_start = 0;
+
+        if (sprite_row_end >= ROWS)
+          sprite_row_end = ROWS - 1;
+
+        if (row < sprite_row_start || row > sprite_row_end)
+          continue;
+
+        const int row_top = row * TILE_S;
+        const int row_bottom = row_top + TILE_S;
+
+        for (int sy = 0; sy < sprite.height; sy++) {
+          const int screen_y = sprite.y + sy;
+
+          if (screen_y < row_top)
             continue;
-          uint16_t px = sprite[sy * spr_w + sx];
-          if (px == 0x0000)
-            continue;
-          pixels[buf_row + buf_x] = px;
+
+          if (screen_y >= row_bottom)
+            break;
+
+          const int buffer_row = (screen_y - row_top) * SCREEN_W;
+
+          for (int sx = 0; sx < sprite.width; sx++) {
+            const int screen_x = sprite.x + sx;
+
+            if (screen_x < 0 || screen_x >= (int)SCREEN_W)
+              continue;
+
+            const uint16_t pixel =
+                sprite.pixels[sy * sprite.width + sx];
+
+            if (pixel == 0x0000)
+              continue;
+
+            pixels[buffer_row + screen_x] = pixel;
+          }
         }
       }
     }
