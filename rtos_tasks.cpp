@@ -194,7 +194,8 @@ void simRenderTask(void *pvParameters) {
         const int input_direction =
             (input.right ? 1 : 0) - (input.left ? 1 : 0);
         player_animation.update(
-            player.getVX(), player.isGrounded(), input_direction);
+            player.getVX(), player.getVY(), player.isGrounded(),
+            input_direction);
 
         if (!game_state.isGameOver()) {
             camera.update(player.getX());
