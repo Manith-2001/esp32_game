@@ -10,6 +10,7 @@ struct RenderSprite {
   int y;
   int width;
   int height;
+  bool flip_x;
 };
 
 class Renderer {

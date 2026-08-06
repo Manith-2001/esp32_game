@@ -105,8 +105,10 @@ void Renderer::render_frame(const uint8_t level_map[][LEVEL_COLS], int cam_x,
             if (screen_x < 0 || screen_x >= (int)SCREEN_W)
               continue;
 
+            const int source_x =
+                sprite.flip_x ? sprite.width - 1 - sx : sx;
             const uint16_t pixel =
-                sprite.pixels[sy * sprite.width + sx];
+                sprite.pixels[sy * sprite.width + source_x];
 
             if (pixel == 0x0000)
               continue;

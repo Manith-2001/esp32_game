@@ -15,6 +15,7 @@
 #include "config.h"
 #include "game_state.h"
 #include "spawn.h"
+#include "player_animation.h"
 
 #include <cstdint>
 #include <freertos/task.h>
@@ -62,6 +63,7 @@ void simRenderTask(void *pvParameters) {
     static constexpr uint32_t BLINK_INTERVAL_MS = 100;
     SpawnManager spawn_manager(initial_spawn);
     Player player(tft, initial_spawn.x, initial_spawn.y);
+    PlayerAnimation player_animation;
     GoombaManager goombas;
     Renderer renderer(tft);
     Camera camera((float)(LEVEL_COLS * TILE_SIZE));
@@ -86,6 +88,7 @@ void simRenderTask(void *pvParameters) {
                 game_state.reset();
                 camera.reset();
                 player.respawn(spawn_manager.initial());
+                player_animation.reset();
                 goombas.randomize(level_map, initial_spawn.x);
                 Serial.printf("[GAME] Restarted with %u lives.\n",
                               (unsigned)game_state.lives());
@@ -188,6 +191,11 @@ void simRenderTask(void *pvParameters) {
             }
         }
 
+        const int input_direction =
+            (input.right ? 1 : 0) - (input.left ? 1 : 0);
+        player_animation.update(
+            player.getVX(), player.isGrounded(), input_direction);
+
         if (!game_state.isGameOver()) {
             camera.update(player.getX());
             cam_x = camera.offset();
@@ -210,7 +218,8 @@ void simRenderTask(void *pvParameters) {
                     (int)goomba.getY() +
                         Goomba::H - Goomba::SPRITE_H,
                     Goomba::SPRITE_W,
-                    Goomba::SPRITE_H};
+                    Goomba::SPRITE_H,
+                    false};
               }
 
               const bool show_player =
@@ -219,13 +228,14 @@ void simRenderTask(void *pvParameters) {
 
               if (show_player) {
                 sprites[sprite_count++] = {
-                    player_sprite,
+                    player_animation.pixels(),
                     (int)(player.getX() - cam_x) +
                         (Player::W - Player::SPRITE_W) / 2,
                     (int)player.getY() +
                         Player::H - Player::SPRITE_H,
                     Player::SPRITE_W,
-                    Player::SPRITE_H};
+                    Player::SPRITE_H,
+                    player_animation.flipX()};
               }
 
               renderer.render_frame(level_map, cam_x,
