@@ -68,7 +68,7 @@ void setup() {
     Serial.println("TFT DMA init failed");
   }
   MainMenu menu(tft);
-  menu.render(BG_COLOR);
+  menu.render(TFT_MAROON);
   xSemaphoreGive(g_simParams.tftMutex);
 
   debug_init();
