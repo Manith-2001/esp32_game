@@ -1,9 +1,9 @@
 #include "player_animation.h"
 
 #include "Arduino.h"
-#include "manith_run_frame_1.h"
-#include "manith_run_frame_2.h"
-#include "manith_sprite.h"
+#include "girl_idle.h"
+#include "girl_run_frame_1.h"
+#include "girl_run_frame_2.h"
 
 PlayerAnimation::PlayerAnimation()
     : frame_index(0), frame_tick(0), facing_left(false),
@@ -61,15 +61,15 @@ void PlayerAnimation::resetPlayback() {
 
 const uint16_t *PlayerAnimation::pixels() const {
     if (state == State::JUMP_RISING || state == State::JUMP_FALLING)
-        return manith_run_frame_1;
+        return girl_run_frame_1;
 
     switch (frame_index) {
     case 1:
-        return manith_run_frame_1;
+        return girl_run_frame_1;
     case 3:
-        return manith_run_frame_2;
+        return girl_run_frame_2;
     default:
-        return manith_sprite;
+        return girl_idle;
     }
 }
 
