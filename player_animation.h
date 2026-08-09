@@ -24,7 +24,6 @@ private:
     static constexpr float RUN_THRESHOLD = 0.1f;
     static constexpr uint8_t RUN_FRAME_COUNT = 4;
     static constexpr uint8_t RUN_FRAME_TICKS = 4;
-    static constexpr uint16_t FRAME_PIXELS = 24 * 24;
 
     void resetPlayback();
 

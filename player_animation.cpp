@@ -1,9 +1,9 @@
 #include "player_animation.h"
 
 #include "Arduino.h"
-#include "player_jump_falling.h"
-#include "player_jump_rising.h"
-#include "player_run_sheet.h"
+#include "manith_run_frame_1.h"
+#include "manith_run_frame_2.h"
+#include "manith_sprite.h"
 
 PlayerAnimation::PlayerAnimation()
     : frame_index(0), frame_tick(0), facing_left(false),
@@ -60,15 +60,20 @@ void PlayerAnimation::resetPlayback() {
 }
 
 const uint16_t *PlayerAnimation::pixels() const {
-    if (state == State::JUMP_RISING)
-        return player_jump_rising;
+    if (state == State::JUMP_RISING || state == State::JUMP_FALLING)
+        return manith_run_frame_1;
 
-    if (state == State::JUMP_FALLING)
-        return player_jump_falling;
-
-    return player_run_sheet + frame_index * FRAME_PIXELS;
+    switch (frame_index) {
+    case 1:
+        return manith_run_frame_1;
+    case 3:
+        return manith_run_frame_2;
+    default:
+        return manith_sprite;
+    }
 }
 
 bool PlayerAnimation::flipX() const {
-    return facing_left;
+    // The source art faces left, so right-facing renders need the flip.
+    return !facing_left;
 }

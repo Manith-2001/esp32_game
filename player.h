@@ -2,15 +2,14 @@
 #include "TFT_eSPI.h"
 #include "config.h"
 #include "input.h"
-#include "player_sprite.h"
 #include "spawn.h"
 
 class Player {
 public:
     static constexpr int W = 10;
     static constexpr int H = 10;
-    static constexpr int SPRITE_W = 24;
-    static constexpr int SPRITE_H = 24;
+    static constexpr int SPRITE_W = 32;
+    static constexpr int SPRITE_H = 32;
 
     Player(TFT_eSPI &tft, float x, float y);
 
