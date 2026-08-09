@@ -62,7 +62,7 @@ void setup() {
   // All TFT access is guarded by the mutex, including setup-time rendering.
   xSemaphoreTake(g_simParams.tftMutex, portMAX_DELAY);
   tft.begin();
-  tft.setRotation(1);
+  tft.setRotation(3);
   tft.fillScreen(BG_COLOR);
   if (!tft.initDMA()) {
     Serial.println("TFT DMA init failed");
