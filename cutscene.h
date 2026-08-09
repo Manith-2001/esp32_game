@@ -83,6 +83,7 @@ private:
   uint32_t page_deadline_ms;
   bool skip_armed;
   bool overlay_dirty;
+  bool truncation_reported;
   uint8_t fired_trigger_mask;
   bool trigger_limit_reported;
 };
