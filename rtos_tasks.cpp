@@ -23,6 +23,9 @@
 // The TFT instance lives in the main sketch (Flash_transparent_PNG.ino).
 extern TFT_eSPI tft;
 
+static constexpr uint8_t WORLD_SPRITE_CAPACITY =
+    GoombaManager::MAX_GOOMBAS + 1;
+
 static void log_goomba_spawns(const GoombaManager &goombas) {
     Serial.printf("[ENEMY] Spawned %u Goombas.\n",
                   (unsigned)goombas.count());
@@ -34,6 +37,55 @@ static void log_goomba_spawns(const GoombaManager &goombas) {
                       (int)goomba.getX(),
                       (int)goomba.getY());
     }
+}
+
+static uint8_t buildWorldSprites(
+    const GoombaManager &goombas,
+    const Player &player,
+    const PlayerAnimation &player_animation,
+    int cam_x,
+    bool show_player,
+    RenderSprite *out,
+    uint8_t max) {
+    if (out == nullptr || max == 0)
+        return 0;
+
+    const uint8_t active_count = goombas.count();
+    const uint8_t goomba_count =
+        active_count < GoombaManager::MAX_GOOMBAS
+            ? active_count
+            : GoombaManager::MAX_GOOMBAS;
+    uint8_t sprite_count = 0;
+
+    for (uint8_t i = 0; i < goomba_count && sprite_count < max; i++) {
+        const Goomba &goomba = goombas.at(i);
+        if (!goomba.isAlive())
+            continue;
+
+        out[sprite_count++] = {
+            goomba_sprite,
+            (int)(goomba.getX() - cam_x) +
+                (Goomba::W - Goomba::SPRITE_W) / 2,
+            (int)goomba.getY() +
+                Goomba::H - Goomba::SPRITE_H,
+            Goomba::SPRITE_W,
+            Goomba::SPRITE_H,
+            false};
+    }
+
+    if (show_player && sprite_count < max) {
+        out[sprite_count++] = {
+            player_animation.pixels(),
+            (int)(player.getX() - cam_x) +
+                (Player::W - Player::SPRITE_W) / 2,
+            (int)player.getY() +
+                Player::H - Player::SPRITE_H,
+            Player::SPRITE_W,
+            Player::SPRITE_H,
+            player_animation.flipX()};
+    }
+
+    return sprite_count;
 }
 
 // ---------------------------------------------------------------------------
@@ -216,40 +268,20 @@ void simRenderTask(void *pvParameters) {
 
             xSemaphoreTake(p.tftMutex, portMAX_DELAY);
             {
-              RenderSprite sprites[GoombaManager::MAX_GOOMBAS + 1];
-              uint8_t sprite_count = 0;
-
-              for (uint8_t i = 0; i < goombas.count(); i++) {
-                const Goomba &goomba = goombas.at(i);
-                if (!goomba.isAlive())
-                    continue;
-
-                sprites[sprite_count++] = {
-                    goomba_sprite,
-                    (int)(goomba.getX() - cam_x) +
-                        (Goomba::W - Goomba::SPRITE_W) / 2,
-                    (int)goomba.getY() +
-                        Goomba::H - Goomba::SPRITE_H,
-                    Goomba::SPRITE_W,
-                    Goomba::SPRITE_H,
-                    false};
-              }
-
+              RenderSprite sprites[WORLD_SPRITE_CAPACITY];
               const bool show_player =
                   !invulnerable ||
                   ((now_ms / BLINK_INTERVAL_MS) % 2U == 0U);
 
-              if (show_player) {
-                sprites[sprite_count++] = {
-                    player_animation.pixels(),
-                    (int)(player.getX() - cam_x) +
-                        (Player::W - Player::SPRITE_W) / 2,
-                    (int)player.getY() +
-                        Player::H - Player::SPRITE_H,
-                    Player::SPRITE_W,
-                    Player::SPRITE_H,
-                    player_animation.flipX()};
-              }
+              const uint8_t sprite_count =
+                  buildWorldSprites(
+                      goombas,
+                      player,
+                      player_animation,
+                      cam_x,
+                      show_player,
+                      sprites,
+                      WORLD_SPRITE_CAPACITY);
 
               renderer.render_frame(level_map, cam_x,
                                     sprites, sprite_count);
