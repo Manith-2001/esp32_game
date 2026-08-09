@@ -15,7 +15,9 @@ GpioInput::GpioInput() : jump_was_pressed(false) {
 
 InputState GpioInput::poll() {
     const bool left = digitalRead(ButtonPins::LEFT) == HIGH;
-    const bool right = digitalRead(ButtonPins::RIGHT) == HIGH;
+    const bool right_pressed = digitalRead(ButtonPins::RIGHT) == HIGH;
+    // If the wiring makes both lines HIGH, treat the input as left only.
+    const bool right = right_pressed && !left;
     const bool jump_pressed = digitalRead(ButtonPins::JUMP) == HIGH;
     const bool jump = jump_pressed && !jump_was_pressed;
 
