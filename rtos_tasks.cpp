@@ -9,7 +9,7 @@
 #include "goomba_sprite.h"
 #include "level.h"
 #include "debug.h"
-#include "serial_input.h"
+#include "input_source.h"
 #include "input.h"
 #include "camera.h"
 #include "config.h"
@@ -37,12 +37,12 @@ static void log_goomba_spawns(const GoombaManager &goombas) {
 }
 
 // ---------------------------------------------------------------------------
-// Input task: runs on core 0, polls serial input and pushes the latest
-// InputState to the queue every ~20 ms.
+// Input task: runs on core 0, polls the selected input source and pushes the
+// latest InputState to the queue every ~20 ms.
 // ---------------------------------------------------------------------------
 void inputTask(void *pvParameters) {
     QueueHandle_t queue = (QueueHandle_t)pvParameters;
-    SerialInput input;
+    ActiveInput input;
 
     for (;;) {
         InputState state = input.poll();

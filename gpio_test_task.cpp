@@ -1,13 +1,12 @@
 #include "gpio_test_task.h"
 
+#include "button_pins.h"
+
 #include <Arduino.h>
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
 
 namespace {
-static constexpr uint8_t GPIO_TEST_PIN_17 = 17; // Left
-static constexpr uint8_t GPIO_TEST_PIN_16 = 16; // Right
-static constexpr uint8_t GPIO_TEST_PIN_18 = 18; // Jump
 static constexpr uint32_t POLL_INTERVAL_MS = 20;
 }
 
@@ -15,18 +14,18 @@ void gpioTestTask(void *pvParameters) {
     (void)pvParameters;
 
     // All test pins use external pull-down resistors on the perf board.
-    pinMode(GPIO_TEST_PIN_17, INPUT);
-    pinMode(GPIO_TEST_PIN_16, INPUT);
-    pinMode(GPIO_TEST_PIN_18, INPUT);
+    pinMode(ButtonPins::LEFT, INPUT);
+    pinMode(ButtonPins::RIGHT, INPUT);
+    pinMode(ButtonPins::JUMP, INPUT);
 
-    int last_state_17 = digitalRead(GPIO_TEST_PIN_17);
-    int last_state_16 = digitalRead(GPIO_TEST_PIN_16);
-    int last_state_18 = digitalRead(GPIO_TEST_PIN_18);
+    int last_state_17 = digitalRead(ButtonPins::LEFT);
+    int last_state_16 = digitalRead(ButtonPins::RIGHT);
+    int last_state_18 = digitalRead(ButtonPins::JUMP);
 
     for (;;) {
-        const int state_17 = digitalRead(GPIO_TEST_PIN_17);
-        const int state_16 = digitalRead(GPIO_TEST_PIN_16);
-        const int state_18 = digitalRead(GPIO_TEST_PIN_18);
+        const int state_17 = digitalRead(ButtonPins::LEFT);
+        const int state_16 = digitalRead(ButtonPins::RIGHT);
+        const int state_18 = digitalRead(ButtonPins::JUMP);
 
         if (state_17 != last_state_17) {
             if (state_17 == HIGH) {
