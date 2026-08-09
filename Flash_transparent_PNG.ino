@@ -33,6 +33,7 @@
 #include "debug.h"
 #include "serial_input.h"
 #include "rtos_tasks.h"
+#include "gpio_test_task.h"
 
 #include <freertos/FreeRTOS.h>
 #include <freertos/task.h>
@@ -77,6 +78,7 @@ void setup() {
   // Sim+render on core 1 (APP_CPU), higher priority; input on core 0 (PRO_CPU).
   xTaskCreatePinnedToCore(simRenderTask, "simRender", 4096, &g_simParams, 2, NULL, 1);
   xTaskCreatePinnedToCore(inputTask,     "input",     1024, g_simParams.inputQueue, 1, NULL, 0);
+  xTaskCreatePinnedToCore(gpioTestTask,  "gpioTest",  4096, NULL, 1, NULL, 0);
 
   Serial.println("\r\nInitialisation done.");
 }
