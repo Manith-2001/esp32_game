@@ -100,21 +100,29 @@ static void composeCutsceneFrame(
     int cam_x,
     SemaphoreHandle_t tft_mutex) {
     RenderSprite sprites[CUTSCENE_SPRITE_CAPACITY];
-    uint8_t sprite_count = buildWorldSprites(
-        goombas,
-        player,
-        player_animation,
-        cam_x,
-        true,
-        sprites,
-        CUTSCENE_SPRITE_CAPACITY);
+    const CutsceneBackground background = cutscene.background();
+    uint8_t sprite_count = 0;
+
+    if (background == CutsceneBackground::REGULAR_LEVEL) {
+        sprite_count = buildWorldSprites(
+            goombas,
+            player,
+            player_animation,
+            cam_x,
+            true,
+            sprites,
+            CUTSCENE_SPRITE_CAPACITY);
+    }
 
     sprite_count += cutscene.stageSprites(
         sprites + sprite_count,
         CUTSCENE_SPRITE_CAPACITY - sprite_count);
 
     xSemaphoreTake(tft_mutex, portMAX_DELAY);
-    renderer.render_frame(level_map, cam_x, sprites, sprite_count);
+    if (background == CutsceneBackground::FLAT_GROUND)
+        renderer.render_flat_ground(sprites, sprite_count);
+    else
+        renderer.render_frame(level_map, cam_x, sprites, sprite_count);
     tft.dmaWait();
     cutscene.renderOverlay();
     xSemaphoreGive(tft_mutex);

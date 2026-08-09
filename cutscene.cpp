@@ -229,6 +229,10 @@ bool CutscenePlayer::isActive() const {
   return scene != nullptr;
 }
 
+CutsceneBackground CutscenePlayer::background() const {
+  return isActive() ? scene->background : CutsceneBackground::REGULAR_LEVEL;
+}
+
 bool CutscenePlayer::update(const InputState &input) {
   if (!isActive())
     return false;

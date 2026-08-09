@@ -18,6 +18,7 @@ public:
   Renderer(TFT_eSPI &tft);
   void render_frame(const uint8_t level_map[][LEVEL_COLS], int cam_x,
                     const RenderSprite *sprites, uint8_t sprite_count);
+  void render_flat_ground(const RenderSprite *sprites, uint8_t sprite_count);
 
 private:
   static constexpr uint8_t COLS = LEVEL_COLS;

@@ -22,6 +22,11 @@ enum class ActorId : uint8_t {
   COUNT
 };
 
+enum class CutsceneBackground : uint8_t {
+  REGULAR_LEVEL,
+  FLAT_GROUND
+};
+
 struct ActorInfo {
   const uint16_t *pixels;
   uint8_t width;
@@ -46,6 +51,7 @@ struct DialogueLine {
 struct Cutscene {
   const DialogueLine *lines;
   uint8_t line_count;
+  CutsceneBackground background;
 };
 
 struct CutsceneTrigger {
@@ -65,6 +71,7 @@ public:
 
   void start(const Cutscene *scene);
   bool isActive() const;
+  CutsceneBackground background() const;
   bool update(const InputState &input);
   void maybeTrigger(float player_x);
   uint8_t stageSprites(RenderSprite *out, uint8_t max) const;
