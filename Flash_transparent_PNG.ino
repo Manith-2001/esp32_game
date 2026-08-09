@@ -26,7 +26,7 @@
 #include "config.h"
 #include "SpongeBob.h"
 #include "assets/piskel.h"
-#include "render.h"
+#include "menu.h"
 #include "player.h"
 #include "level.h"
 #include "tiles.h"
@@ -59,17 +59,16 @@ void setup() {
   g_simParams.tftMutex = xSemaphoreCreateMutex();
   g_simParams.inputQueue = xQueueCreate(1, sizeof(InputState));
 
-  // Initialise the TFT and draw the static level once.
+  // Initialise the TFT and draw the startup menu once.
   // All TFT access is guarded by the mutex, including setup-time rendering.
   xSemaphoreTake(g_simParams.tftMutex, portMAX_DELAY);
   tft.begin();
   tft.setRotation(3);
-  tft.fillScreen(BG_COLOR);
   if (!tft.initDMA()) {
     Serial.println("TFT DMA init failed");
   }
-  Renderer renderer(tft);
-  renderer.render_frame(level_map, 0, nullptr, 0);
+  MainMenu menu(tft);
+  menu.render(BG_COLOR);
   xSemaphoreGive(g_simParams.tftMutex);
 
   debug_init();

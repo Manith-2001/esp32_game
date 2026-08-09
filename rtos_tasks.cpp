@@ -68,19 +68,31 @@ void simRenderTask(void *pvParameters) {
     Renderer renderer(tft);
     Camera camera((float)(LEVEL_COLS * TILE_SIZE));
     GameState game_state;
+    bool game_started = false;
 
     randomSeed(static_cast<unsigned long>(micros()));
-    goombas.randomize(level_map, initial_spawn.x);
-
-    Serial.printf("[GAME] Started with %u lives.\n",
-                  (unsigned)game_state.lives());
-    log_goomba_spawns(goombas);
 
     for (;;) {
         // Drain the queue — keep only the most recent InputState.
         InputState tmp;
         while (xQueueReceive(p.inputQueue, &tmp, 0) == pdTRUE) {
             input = tmp;
+        }
+
+        if (!game_started) {
+            if (!input.jump) {
+                vTaskDelayUntil(&lastWake, pdMS_TO_TICKS(16));
+                continue;
+            }
+
+            game_started = true;
+            goombas.randomize(level_map, initial_spawn.x);
+            Serial.printf("[GAME] Started with %u lives.\n",
+                          (unsigned)game_state.lives());
+            log_goomba_spawns(goombas);
+
+            // Do not carry the menu input into the first gameplay frame.
+            input = InputState{};
         }
 
         if (game_state.isGameOver()) {
