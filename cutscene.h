@@ -39,7 +39,6 @@ struct StageActor {
 struct DialogueLine {
   ActorId speaker;
   const char *text;
-  uint16_t duration_ms;
   uint8_t actor_count;
   StageActor actors[CutsceneLimits::MAX_STAGE_ACTORS];
 };
@@ -66,22 +65,22 @@ public:
 
   void start(const Cutscene *scene);
   bool isActive() const;
-  bool update(const InputState &input, uint32_t now_ms);
+  bool update(const InputState &input);
   void maybeTrigger(float player_x);
   uint8_t stageSprites(RenderSprite *out, uint8_t max) const;
   void renderOverlay();
 
 private:
   static bool isValidActor(ActorId actor);
-  static uint16_t autoDurationMs(const char *text);
-  void beginPage(uint32_t now_ms);
+  void beginPage();
   void finish(bool skipped);
 
   TFT_eSPI &tft;
   const Cutscene *scene;
   uint8_t page_index;
-  uint32_t page_deadline_ms;
   bool skip_armed;
+  bool left_armed;
+  bool right_armed;
   bool overlay_dirty;
   bool truncation_reported;
   uint8_t fired_trigger_mask;

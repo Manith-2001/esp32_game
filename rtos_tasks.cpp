@@ -16,6 +16,7 @@
 #include "game_state.h"
 #include "spawn.h"
 #include "player_animation.h"
+#include "cutscene.h"
 
 #include <cstdint>
 #include <freertos/task.h>
@@ -25,6 +26,8 @@ extern TFT_eSPI tft;
 
 static constexpr uint8_t WORLD_SPRITE_CAPACITY =
     GoombaManager::MAX_GOOMBAS + 1;
+static constexpr uint8_t CUTSCENE_SPRITE_CAPACITY =
+    WORLD_SPRITE_CAPACITY + CutsceneLimits::MAX_STAGE_ACTORS;
 
 static void log_goomba_spawns(const GoombaManager &goombas) {
     Serial.printf("[ENEMY] Spawned %u Goombas.\n",
@@ -88,6 +91,35 @@ static uint8_t buildWorldSprites(
     return sprite_count;
 }
 
+static void composeCutsceneFrame(
+    Renderer &renderer,
+    CutscenePlayer &cutscene,
+    const GoombaManager &goombas,
+    const Player &player,
+    const PlayerAnimation &player_animation,
+    int cam_x,
+    SemaphoreHandle_t tft_mutex) {
+    RenderSprite sprites[CUTSCENE_SPRITE_CAPACITY];
+    uint8_t sprite_count = buildWorldSprites(
+        goombas,
+        player,
+        player_animation,
+        cam_x,
+        true,
+        sprites,
+        CUTSCENE_SPRITE_CAPACITY);
+
+    sprite_count += cutscene.stageSprites(
+        sprites + sprite_count,
+        CUTSCENE_SPRITE_CAPACITY - sprite_count);
+
+    xSemaphoreTake(tft_mutex, portMAX_DELAY);
+    renderer.render_frame(level_map, cam_x, sprites, sprite_count);
+    tft.dmaWait();
+    cutscene.renderOverlay();
+    xSemaphoreGive(tft_mutex);
+}
+
 // ---------------------------------------------------------------------------
 // Input task: runs on core 0, polls the selected input source and pushes the
 // latest InputState to the queue every ~20 ms.
@@ -120,6 +152,7 @@ void simRenderTask(void *pvParameters) {
     Renderer renderer(tft);
     Camera camera((float)(LEVEL_COLS * TILE_SIZE));
     GameState game_state;
+    CutscenePlayer cutscene(tft);
     bool game_started = false;
 
     randomSeed(static_cast<unsigned long>(micros()));
@@ -142,9 +175,15 @@ void simRenderTask(void *pvParameters) {
             Serial.printf("[GAME] Started with %u lives.\n",
                           (unsigned)game_state.lives());
             log_goomba_spawns(goombas);
+            cutscene.start(&CUTSCENE_INTRO);
 
             // Do not carry the menu input into the first gameplay frame.
             input = InputState{};
+
+            // Let the input task provide a real release snapshot before the
+            // cutscene can arm its skip handler.
+            vTaskDelayUntil(&lastWake, pdMS_TO_TICKS(16));
+            continue;
         }
 
         if (game_state.isGameOver()) {
@@ -165,6 +204,17 @@ void simRenderTask(void *pvParameters) {
 
         const uint32_t now_ms = (uint32_t)millis();
         bool invulnerable = game_state.isInvulnerable(now_ms);
+
+        if (cutscene.isActive()) {
+            if (cutscene.update(input)) {
+                composeCutsceneFrame(renderer, cutscene, goombas, player,
+                                     player_animation, camera.offset(),
+                                     p.tftMutex);
+            }
+
+            vTaskDelayUntil(&lastWake, pdMS_TO_TICKS(16));
+            continue;
+        }
 
 #if DEBUG_MODE
         unsigned long t0 = micros();

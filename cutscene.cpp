@@ -1,12 +1,6 @@
 #include "cutscene.h"
 
 #include <cstddef>
-#include <cstring>
-
-static constexpr uint16_t DEFAULT_MIN_DURATION_MS = 2000;
-static constexpr uint16_t DEFAULT_MAX_DURATION_MS = 6000;
-static constexpr uint16_t DEFAULT_BASE_DURATION_MS = 1500;
-static constexpr uint16_t DEFAULT_CHAR_DURATION_MS = 60;
 
 static constexpr int DIALOGUE_BOX_X = 8;
 static constexpr int DIALOGUE_BOX_Y = 172;
@@ -182,6 +176,13 @@ static void drawNameTag(TFT_eSPI &tft, const char *name) {
                  NAME_TAG_Y + NAME_TAG_H / 2, NAME_TAG_FONT);
 }
 
+static void drawNavigationHint(TFT_eSPI &tft) {
+  tft.setTextDatum(TL_DATUM);
+  tft.setTextColor(TFT_YELLOW, TFT_NAVY);
+  tft.drawString("LEFT/RIGHT: PREV/NEXT", DIALOGUE_BOX_X + 8,
+                 DIALOGUE_BOX_Y + 4, HINT_FONT);
+}
+
 static void drawSkipHint(TFT_eSPI &tft) {
   tft.setTextDatum(TR_DATUM);
   tft.setTextColor(TFT_YELLOW, TFT_NAVY);
@@ -193,8 +194,9 @@ CutscenePlayer::CutscenePlayer(TFT_eSPI &tft)
     : tft(tft),
       scene(nullptr),
       page_index(0),
-      page_deadline_ms(0),
       skip_armed(false),
+      left_armed(false),
+      right_armed(false),
       overlay_dirty(true),
       truncation_reported(false),
       fired_trigger_mask(0),
@@ -215,7 +217,9 @@ void CutscenePlayer::start(const Cutscene *next_scene) {
   scene = next_scene;
   page_index = 0;
   skip_armed = false;
-  beginPage(static_cast<uint32_t>(millis()));
+  left_armed = false;
+  right_armed = false;
+  beginPage();
 
   Serial.printf("[CUTSCENE] Started scene with %u pages.\n",
                 static_cast<unsigned>(scene->line_count));
@@ -225,7 +229,7 @@ bool CutscenePlayer::isActive() const {
   return scene != nullptr;
 }
 
-bool CutscenePlayer::update(const InputState &input, uint32_t now_ms) {
+bool CutscenePlayer::update(const InputState &input) {
   if (!isActive())
     return false;
 
@@ -236,14 +240,31 @@ bool CutscenePlayer::update(const InputState &input, uint32_t now_ms) {
     return false;
   }
 
-  if (static_cast<int32_t>(page_deadline_ms - now_ms) <= 0) {
-    ++page_index;
-    if (page_index >= scene->line_count) {
+  if (!input.left)
+    left_armed = true;
+  if (!input.right)
+    right_armed = true;
+
+  if (input.left && input.right) {
+    // Conflicting direction input must be released before either direction
+    // can navigate again.
+    left_armed = false;
+    right_armed = false;
+  } else if (input.right && right_armed) {
+    right_armed = false;
+    if (page_index + 1U >= scene->line_count) {
       finish(false);
       return false;
     }
 
-    beginPage(now_ms);
+    ++page_index;
+    beginPage();
+  } else if (input.left && left_armed) {
+    left_armed = false;
+    if (page_index > 0) {
+      --page_index;
+      beginPage();
+    }
   }
 
   const bool redraw = overlay_dirty;
@@ -345,6 +366,7 @@ void CutscenePlayer::renderOverlay() {
                    DIALOGUE_FONT);
   }
 
+  drawNavigationHint(tft);
   drawSkipHint(tft);
 
   if (truncated && !truncation_reported) {
@@ -359,34 +381,7 @@ bool CutscenePlayer::isValidActor(ActorId actor) {
          static_cast<uint8_t>(ActorId::COUNT);
 }
 
-uint16_t CutscenePlayer::autoDurationMs(const char *text) {
-  const std::size_t length = text == nullptr ? 0 : std::strlen(text);
-  const std::size_t max_extra_chars =
-      (DEFAULT_MAX_DURATION_MS - DEFAULT_BASE_DURATION_MS) /
-      DEFAULT_CHAR_DURATION_MS;
-
-  uint32_t duration = DEFAULT_BASE_DURATION_MS;
-  if (length >= max_extra_chars) {
-    duration = DEFAULT_MAX_DURATION_MS;
-  } else {
-    duration += static_cast<uint32_t>(length) * DEFAULT_CHAR_DURATION_MS;
-  }
-
-  if (duration < DEFAULT_MIN_DURATION_MS)
-    duration = DEFAULT_MIN_DURATION_MS;
-  if (duration > DEFAULT_MAX_DURATION_MS)
-    duration = DEFAULT_MAX_DURATION_MS;
-
-  return static_cast<uint16_t>(duration);
-}
-
-void CutscenePlayer::beginPage(uint32_t now_ms) {
-  const DialogueLine &line = scene->lines[page_index];
-  const uint16_t duration = line.duration_ms != 0
-                                ? line.duration_ms
-                                : autoDurationMs(line.text);
-
-  page_deadline_ms = now_ms + static_cast<uint32_t>(duration);
+void CutscenePlayer::beginPage() {
   overlay_dirty = true;
   truncation_reported = false;
 }
@@ -405,8 +400,9 @@ void CutscenePlayer::finish(bool skipped) {
 
   scene = nullptr;
   page_index = 0;
-  page_deadline_ms = 0;
   skip_armed = false;
+  left_armed = false;
+  right_armed = false;
   overlay_dirty = false;
   truncation_reported = false;
 }

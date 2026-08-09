@@ -13,15 +13,15 @@ const ActorInfo CUTSCENE_ACTORS[
 };
 
 static const DialogueLine intro_lines[] = {
-  {ActorId::GIRL, "Manith! The goombas escaped the pen!", 0, 2, {
+  {ActorId::GIRL, "Manith! The goombas escaped the pen!", 2, {
       {ActorId::GIRL, 40, 140, false},
       {ActorId::MANITH, 248, 140, true},
   }},
-  {ActorId::MANITH, "Then we round them up. Together.", 0, 2, {
+  {ActorId::MANITH, "Then we round them up. Together.", 2, {
       {ActorId::GIRL, 40, 140, false},
       {ActorId::MANITH, 248, 140, true},
   }},
-  {ActorId::GOOMBA, "...", 0, 2, {
+  {ActorId::GOOMBA, "...", 2, {
       {ActorId::MANITH, 248, 140, true},
       {ActorId::GOOMBA, 120, 156, false},
   }},
@@ -36,10 +36,10 @@ const Cutscene CUTSCENE_INTRO = {
 // optionally one CutsceneTrigger row. Authors can replace this sample data
 // without modifying the playback engine.
 static const DialogueLine mid_level_lines[] = {
-  {ActorId::NARRATOR, "Something is moving ahead...", 0, 1, {
+  {ActorId::NARRATOR, "Something is moving ahead...", 1, {
       {ActorId::GOOMBA, 152, 156, false},
   }},
-  {ActorId::MANITH, "There you are!", 0, 2, {
+  {ActorId::MANITH, "There you are!", 2, {
       {ActorId::MANITH, 248, 140, true},
       {ActorId::GOOMBA, 152, 156, false},
   }},

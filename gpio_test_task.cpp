@@ -19,12 +19,12 @@ void gpioTestTask(void *pvParameters) {
     pinMode(ButtonPins::JUMP, INPUT);
 
     int last_state_17 = digitalRead(ButtonPins::LEFT);
-    int last_state_16 = digitalRead(ButtonPins::RIGHT);
+    int last_state_4 = digitalRead(ButtonPins::RIGHT);
     int last_state_18 = digitalRead(ButtonPins::JUMP);
 
     for (;;) {
         const int state_17 = digitalRead(ButtonPins::LEFT);
-        const int state_16 = digitalRead(ButtonPins::RIGHT);
+        const int state_4 = digitalRead(ButtonPins::RIGHT);
         const int state_18 = digitalRead(ButtonPins::JUMP);
 
         if (state_17 != last_state_17) {
@@ -36,13 +36,13 @@ void gpioTestTask(void *pvParameters) {
             last_state_17 = state_17;
         }
 
-        if (state_16 != last_state_16) {
-            if (state_16 == HIGH) {
-                Serial.println("[GPIO TEST] GPIO16 changed to HIGH digitalRead=1");
+        if (state_4 != last_state_4) {
+            if (state_4 == HIGH) {
+                Serial.println("[GPIO TEST] GPIO4 changed to HIGH digitalRead=1");
             } else {
-                Serial.println("[GPIO TEST] GPIO16 changed to LOW digitalRead=0");
+                Serial.println("[GPIO TEST] GPIO4 changed to LOW digitalRead=0");
             }
-            last_state_16 = state_16;
+            last_state_4 = state_4;
         }
 
         if (state_18 != last_state_18) {
