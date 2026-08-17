@@ -229,6 +229,10 @@ bool CutscenePlayer::isActive() const {
   return scene != nullptr;
 }
 
+bool CutscenePlayer::completesGame() const {
+  return isActive() && scene->ends_game;
+}
+
 CutsceneBackground CutscenePlayer::background() const {
   return isActive() ? scene->background : CutsceneBackground::REGULAR_LEVEL;
 }
@@ -305,6 +309,11 @@ void CutscenePlayer::maybeTrigger(float player_x) {
     start(trigger.scene);
     return;
   }
+}
+
+void CutscenePlayer::resetTriggers() {
+  fired_trigger_mask = 0;
+  trigger_limit_reported = false;
 }
 
 uint8_t CutscenePlayer::stageSprites(RenderSprite *out, uint8_t max) const {

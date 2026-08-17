@@ -52,6 +52,7 @@ struct Cutscene {
   const DialogueLine *lines;
   uint8_t line_count;
   CutsceneBackground background;
+  bool ends_game;
 };
 
 struct CutsceneTrigger {
@@ -71,9 +72,11 @@ public:
 
   void start(const Cutscene *scene);
   bool isActive() const;
+  bool completesGame() const;
   CutsceneBackground background() const;
   bool update(const InputState &input);
   void maybeTrigger(float player_x);
+  void resetTriggers();
   uint8_t stageSprites(RenderSprite *out, uint8_t max) const;
   void renderOverlay();
 

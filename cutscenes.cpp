@@ -48,30 +48,45 @@ static const DialogueLine intro_lines[] = {
 const Cutscene CUTSCENE_INTRO = {
   intro_lines,
   static_cast<uint8_t>(sizeof(intro_lines) / sizeof(intro_lines[0])),
-  CutsceneBackground::FLAT_GROUND
+  CutsceneBackground::FLAT_GROUND,
+  false
 };
 
-// A custom scene requires a DialogueLine array, a Cutscene value, and
-// optionally one CutsceneTrigger row. Authors can replace this sample data
-// without modifying the playback engine.
-static const DialogueLine mid_level_lines[] = {
-  {ActorId::NARRATOR, "Something is moving ahead...", 1, {
-      {ActorId::GOOMBA, 152, 156, false},
+static const DialogueLine ending_lines[] = {
+  {ActorId::GOOMBA,
+   "Aghhh! You dodged and\nbeat all those bugs.", 2, {
+      {ActorId::GIRL, 112, 128, true},
+      {ActorId::GOOMBA, 240, 144, false},
   }},
-  {ActorId::MANITH, "There you are!", 2, {
-      {ActorId::MANITH, 248, 140, true},
-      {ActorId::GOOMBA, 152, 156, false},
+  {ActorId::GOOMBA,
+   "You really are strong,\nMubu. Fine, you can have\nManith back.", 2, {
+      {ActorId::GIRL, 112, 128, true},
+      {ActorId::GOOMBA, 240, 144, false},
+  }},
+  {ActorId::NARRATOR, "...", 3, {
+      {ActorId::GIRL, 112, 128, true},
+      {ActorId::MANITH, 176, 128, false},
+      {ActorId::GOOMBA, 320, 144, false},
+  }},
+  {ActorId::MANITH,
+   "Thank you, my Mubu hero,\nfor saving me.", 2, {
+      {ActorId::GIRL, 112, 128, true},
+      {ActorId::MANITH, 176, 128, false},
   }},
 };
 
-static const Cutscene CUTSCENE_MID_LEVEL = {
-  mid_level_lines,
-  static_cast<uint8_t>(sizeof(mid_level_lines) / sizeof(mid_level_lines[0])),
-  CutsceneBackground::REGULAR_LEVEL
+static constexpr float END_LEVEL_TRIGGER_X =
+    static_cast<float>(LEVEL_COLS * TILE_SIZE - 2 * TILE_SIZE);
+
+static const Cutscene CUTSCENE_ENDING = {
+  ending_lines,
+  static_cast<uint8_t>(sizeof(ending_lines) / sizeof(ending_lines[0])),
+  CutsceneBackground::FLAT_GROUND,
+  true
 };
 
 const CutsceneTrigger CUTSCENE_TRIGGERS[] = {
-  {320.0f, &CUTSCENE_MID_LEVEL},
+  {END_LEVEL_TRIGGER_X, &CUTSCENE_ENDING},
 };
 
 const uint8_t CUTSCENE_TRIGGER_COUNT = static_cast<uint8_t>(
