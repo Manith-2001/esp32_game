@@ -10,15 +10,18 @@ public:
     enum class Phase : uint8_t {
         PLAYING,
         GAME_OVER,
+        VICTORY,
     };
 
     GameState();
 
     bool loseLife(uint32_t now_ms);
+    void complete();
     void reset();
 
     uint8_t lives() const;
     bool isGameOver() const;
+    bool isVictory() const;
     bool isInvulnerable(uint32_t now_ms) const;
 
 private:

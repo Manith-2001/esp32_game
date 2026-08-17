@@ -17,6 +17,7 @@
 #include "spawn.h"
 #include "player_animation.h"
 #include "cutscene.h"
+#include "victory_screen.h"
 
 #include <cstdint>
 #include <freertos/task.h>
@@ -161,7 +162,10 @@ void simRenderTask(void *pvParameters) {
     Camera camera((float)(LEVEL_COLS * TILE_SIZE));
     GameState game_state;
     CutscenePlayer cutscene(tft);
+    VictoryScreen victory_screen(tft);
     bool game_started = false;
+    bool ending_cutscene = false;
+    bool victory_restart_armed = false;
 
     randomSeed(static_cast<unsigned long>(micros()));
 
@@ -194,13 +198,34 @@ void simRenderTask(void *pvParameters) {
             continue;
         }
 
-        if (game_state.isGameOver()) {
+        if (game_state.isVictory()) {
+            if (!input.jump)
+                victory_restart_armed = true;
+
+            if (input.jump && victory_restart_armed) {
+                game_state.reset();
+                camera.reset();
+                player.respawn(spawn_manager.initial());
+                player_animation.reset();
+                goombas.randomize(level_map, initial_spawn.x);
+                cutscene.resetTriggers();
+                ending_cutscene = false;
+                victory_restart_armed = false;
+                Serial.printf("[GAME] Restarted with %u lives.\n",
+                              (unsigned)game_state.lives());
+                log_goomba_spawns(goombas);
+            } else {
+                vTaskDelayUntil(&lastWake, pdMS_TO_TICKS(16));
+                continue;
+            }
+        } else if (game_state.isGameOver()) {
             if (input.jump) {
                 game_state.reset();
                 camera.reset();
                 player.respawn(spawn_manager.initial());
                 player_animation.reset();
                 goombas.randomize(level_map, initial_spawn.x);
+                cutscene.resetTriggers();
                 Serial.printf("[GAME] Restarted with %u lives.\n",
                               (unsigned)game_state.lives());
                 log_goomba_spawns(goombas);
@@ -218,6 +243,17 @@ void simRenderTask(void *pvParameters) {
                 composeCutsceneFrame(renderer, cutscene, goombas, player,
                                      player_animation, camera.offset(),
                                      p.tftMutex);
+            }
+
+            if (!cutscene.isActive() && ending_cutscene) {
+                ending_cutscene = false;
+                game_state.complete();
+                victory_restart_armed = false;
+
+                xSemaphoreTake(p.tftMutex, portMAX_DELAY);
+                tft.dmaWait();
+                victory_screen.render();
+                xSemaphoreGive(p.tftMutex);
             }
 
             vTaskDelayUntil(&lastWake, pdMS_TO_TICKS(16));
@@ -311,6 +347,12 @@ void simRenderTask(void *pvParameters) {
                     invulnerable = game_state.isInvulnerable(now_ms);
                 }
             }
+        }
+
+        if (!death_detected && !game_state.isGameOver()) {
+            cutscene.maybeTrigger(player.getX());
+            if (cutscene.completesGame())
+                ending_cutscene = true;
         }
 
         const int input_direction =

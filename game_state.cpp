@@ -5,7 +5,7 @@ GameState::GameState()
       invulnerable_until_ms(0), respawn_protected(false) {}
 
 bool GameState::loseLife(uint32_t now_ms) {
-    if (phase == Phase::GAME_OVER || remaining_lives == 0 ||
+    if (phase != Phase::PLAYING || remaining_lives == 0 ||
         isInvulnerable(now_ms))
         return false;
 
@@ -22,6 +22,15 @@ bool GameState::loseLife(uint32_t now_ms) {
     return true;
 }
 
+void GameState::complete() {
+    if (phase != Phase::PLAYING)
+        return;
+
+    phase = Phase::VICTORY;
+    invulnerable_until_ms = 0;
+    respawn_protected = false;
+}
+
 void GameState::reset() {
     remaining_lives = STARTING_LIVES;
     phase = Phase::PLAYING;
@@ -35,6 +44,10 @@ uint8_t GameState::lives() const {
 
 bool GameState::isGameOver() const {
     return phase == Phase::GAME_OVER;
+}
+
+bool GameState::isVictory() const {
+    return phase == Phase::VICTORY;
 }
 
 bool GameState::isInvulnerable(uint32_t now_ms) const {
