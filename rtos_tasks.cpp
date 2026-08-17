@@ -17,6 +17,8 @@
 #include "spawn.h"
 #include "player_animation.h"
 #include "cutscene.h"
+#include "menu.h"
+#include "otp_screen.h"
 #include "victory_screen.h"
 
 #include <cstdint>
@@ -163,7 +165,11 @@ void simRenderTask(void *pvParameters) {
     GameState game_state;
     CutscenePlayer cutscene(tft);
     VictoryScreen victory_screen(tft);
+    OtpScreen otp_screen(tft);
+    MainMenu main_menu(tft);
+    bool authenticated = false;
     bool game_started = false;
+    bool start_armed = false;
     bool ending_cutscene = false;
     bool victory_restart_armed = false;
 
@@ -176,8 +182,35 @@ void simRenderTask(void *pvParameters) {
             input = tmp;
         }
 
+        if (!authenticated) {
+            const bool screen_changed = otp_screen.update(input);
+
+            if (!otp_screen.isUnlocked()) {
+                if (screen_changed) {
+                    xSemaphoreTake(p.tftMutex, portMAX_DELAY);
+                    otp_screen.render();
+                    xSemaphoreGive(p.tftMutex);
+                }
+
+                vTaskDelayUntil(&lastWake, pdMS_TO_TICKS(16));
+                continue;
+            }
+
+            authenticated = true;
+            start_armed = false;
+            input = InputState{};
+
+            xSemaphoreTake(p.tftMutex, portMAX_DELAY);
+            main_menu.render(TFT_MAROON);
+            xSemaphoreGive(p.tftMutex);
+            continue;
+        }
+
         if (!game_started) {
-            if (!input.jump) {
+            if (!input.jump)
+                start_armed = true;
+
+            if (!input.jump || !start_armed) {
                 vTaskDelayUntil(&lastWake, pdMS_TO_TICKS(16));
                 continue;
             }

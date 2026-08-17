@@ -26,7 +26,7 @@
 #include "config.h"
 #include "SpongeBob.h"
 #include "assets/piskel.h"
-#include "menu.h"
+#include "otp_screen.h"
 #include "player.h"
 #include "level.h"
 #include "tiles.h"
@@ -59,7 +59,7 @@ void setup() {
   g_simParams.tftMutex = xSemaphoreCreateMutex();
   g_simParams.inputQueue = xQueueCreate(1, sizeof(InputState));
 
-  // Initialise the TFT and draw the startup menu once.
+  // Initialise the TFT and draw the OTP gate once.
   // All TFT access is guarded by the mutex, including setup-time rendering.
   xSemaphoreTake(g_simParams.tftMutex, portMAX_DELAY);
   tft.begin();
@@ -67,8 +67,8 @@ void setup() {
   if (!tft.initDMA()) {
     Serial.println("TFT DMA init failed");
   }
-  MainMenu menu(tft);
-  menu.render(TFT_MAROON);
+  OtpScreen otp_screen(tft);
+  otp_screen.render();
   xSemaphoreGive(g_simParams.tftMutex);
 
   debug_init();
