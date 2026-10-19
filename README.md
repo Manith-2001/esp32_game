@@ -2,7 +2,7 @@
 
 A Super Mario Bros-style side-scrolling platformer for **ESP32-WROOM-32 (DOIT Devkit V1)** + **ILI9341 320×240 TFT**, written as an Arduino sketch with FreeRTOS, no framebuffer, and no PSRAM.
 
-Features: 60×15 scrolling tile level, player physics, Goomba enemies with stomping, 3 lives + respawn + invulnerability, dialogue cutscenes + victory screen, serial/GPIO input, serial debug telemetry, and button-triggered Wi-Fi OTA maintenance mode.
+Features: 60×15 scrolling tile level, player physics, Goomba enemies with stomping, 3 lives + respawn + invulnerability, dialogue cutscenes + victory screen, serial/GPIO input, and serial debug telemetry.
 
 ## Hardware
 
@@ -38,8 +38,6 @@ No Makefile / PlatformIO — Arduino IDE only:
 3. Configure `TFT_eSPI` for ILI9341 + your wiring
 4. Select ESP32 Dev Module, compile, upload
 
-Partition layout lives in `partitions.csv` (2× `0x170000` OTA slots + SPIFFS `storage`).
-
 ## Architecture
 
 ```text
@@ -51,19 +49,12 @@ Partition layout lives in `partitions.csv` (2× `0x170000` OTA slots + SPIFFS `s
                      | Mutex+Queue|
                      +-----+------+
                            |
-                    +------v-------+
-                    |  BootGuard / |
-                    |  Button hold |
-                    +--+-------+---+
-                       |       |
-                 held  |       | not held
-                       |       |
-          +------------v-+   +-v--------------+
-          | OTA Maintenance| |   Game Mode    |
-          | SoftAP :8080   | | OTP gate once  |
-          | Upload -> Flash| | then tasks run |
-          +----------------+ +-------+--------+
-                                       |
+                     +-----v------+
+                     | OTP gate   |
+                     | once, then |
+                     | tasks run  |
+                     +-----+------+
+                           |
                     +----------------------------------+
                     |           FreeRTOS tasks         |
                     |                                  |
@@ -105,7 +96,7 @@ Partition layout lives in `partitions.csv` (2× `0x170000` OTA slots + SPIFFS `s
           share the UART via the driver.
 ```
 
-- `Flash_transparent_PNG.ino`: thin orchestrator — TFT/DMA init, OTP gate, OTA check, task startup. `loop()` just sleeps.
+- `Flash_transparent_PNG.ino`: thin orchestrator — TFT/DMA init, OTP gate, task startup. `loop()` just sleeps.
 - FreeRTOS: `inputTask` (serial poll → queue length-1 always-latest) + `simRenderTask` (fixed tick: input → player → pit/death/lives → camera → viewport render → sprites). All `tft.*` guarded by mutex.
 - `config.h`: dimensions — `LEVEL 60×15`, `SCREEN 320×240 / 20×15 cols`, `TILE 16px`.
 - Gameplay: `player.{h,cpp}` (gravity/collisions/stomp-bounce), `goomba.{h,cpp}` + `goomba_manager`, `camera` (SMB1 ratchet, right-only scroll), `spawn` (respawn N tiles behind death, search left for ground), `game_state` (3 lives, 5 s post-respawn blink, game-over/victory), `render` (full viewport redraw + transparent `0x0000` → sky), `cutscene` + `cutscenes.cpp` (authored dialogue pages), `victory_screen`, `menu`.
@@ -134,21 +125,6 @@ Per-frame example:
 
 Legend: `.`=empty `B`=block `G`=grass `C`=cloud `#`=OOB `=`=pit edge. Includes `*** WALL/LAND/CEIL` and `GROUND LOST/GAINED` events plus 3×3 surroundings dump.
 
-## OTA Maintenance Mode
-
-Hold all 3 buttons during reset (~1.5 s) → boots to SoftAP + HTTP OTA at `192.168.4.1` instead of the game. Screen shows SSID/password/pairing code.
-
-Flow: `GET /api/v1/device` → `POST /api/v1/session` (pairing code) → `POST /api/v1/update/firmware` (raw `.bin` + bearer token + SHA-256 headers) → reboot into new firmware.
-
-Release manifest:
-
-```bash
-python3 tools/make_firmware_manifest.py firmware.bin --version 0.2.0 --build 2 --game-id platformer --output firmware.json
-# tested by tests/test_firmware_manifest.py
-```
-
-Each game is a full firmware image; only one runs at a time.
-
 ## Project Layout
 
 ```text
@@ -159,9 +135,6 @@ render / tiles.h / level.h  drawing + map
 cutscene* / victory_screen / menu  story + UI
 serial_input / gpio_input / input*  inputs
 rtos_tasks / png_support.ino  tasks + PNG callback
-maintenance_mode / ota_* / otp_screen / partitions.csv  OTA + boot
+otp_screen  boot gate
 assets/  converters + level generator
-tools/ + tests/  manifest generator + test
 ```
-
-`AGENTS.md` has contributor conventions; `PLAN.md` / `RTOS_PLAN.md` / `ANIMATION.md` are design notes.
