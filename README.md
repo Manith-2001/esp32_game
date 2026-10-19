@@ -11,6 +11,14 @@ Features: 60×15 scrolling tile level, player physics, Goomba enemies with stomp
 - Physical buttons: GPIO17 (Left), GPIO4 (Right), GPIO18 (Jump), active HIGH
 - USB serial @ 115200 baud for debug + keyboard input
 
+## Photos
+
+![Product photo](images/product.jpg)
+<!-- Replace with your photo: edit README.md on GitHub, drag-drop the image here -->
+
+![Wiring diagram](images/wiring-diagram.png)
+<!-- Replace with your diagram: edit README.md on GitHub, drag-drop the image here -->
+
 ## Controls
 
 | Input | Jump | Left | Right |
