@@ -1,4 +1,4 @@
-# ESP32 Platformer — Flash Transparent PNG
+# ESP32 Platformer
 
 A Super Mario Bros-style side-scrolling platformer for **ESP32-WROOM-32 (DOIT Devkit V1)** + **ILI9341 320×240 TFT**, written as an Arduino sketch with FreeRTOS, no framebuffer, and no PSRAM.
 
