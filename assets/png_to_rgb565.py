@@ -6,6 +6,7 @@ Usage:
     python3 png_to_rgb565.py block.png                    # -> block.h
     python3 png_to_rgb565.py block.png -n dirt_tile        # custom name
     python3 png_to_rgb565.py block.png --bg 135,206,235    # sky-blue bg for transparent pixels
+    python3 png_to_rgb565.py player.png --size 24          # resize to a 24x24 canvas
 """
 
 import argparse
@@ -23,8 +24,15 @@ def rgb888_to_rgb565(r, g, b):
     return (r5 << 11) | (g6 << 5) | b5
 
 
-def convert(input_path, array_name, output_path, bg_color):
+def convert(input_path, array_name, output_path, bg_color, target_size=None):
     img = Image.open(input_path)
+
+    if target_size is not None:
+        if target_size <= 0:
+            raise ValueError("target_size must be positive")
+        resampling = getattr(Image, "Resampling", Image)
+        img = img.resize((target_size, target_size), resampling.NEAREST)
+
     w, h = img.size
 
     pixels = []
@@ -95,6 +103,12 @@ def main():
         help="R,G,B color for transparent pixels (default: 0,0,0 = black)",
         default="0,0,0",
     )
+    parser.add_argument(
+        "--size",
+        type=int,
+        metavar="PIXELS",
+        help="resize the input to a square PIXELS x PIXELS canvas using nearest-neighbor",
+    )
     args = parser.parse_args()
 
     if not os.path.isfile(args.file):
@@ -114,7 +128,7 @@ def main():
         os.path.dirname(args.file) or ".", f"{name}.h"
     )
 
-    convert(args.file, name, output, bg)
+    convert(args.file, name, output, bg, args.size)
 
 
 if __name__ == "__main__":
