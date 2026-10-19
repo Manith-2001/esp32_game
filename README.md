@@ -12,12 +12,9 @@ Features: 60×15 scrolling tile level, player physics, Goomba enemies with stomp
 - USB serial @ 115200 baud for debug + keyboard input
 
 ## Photos
+<img width="1064" height="792" alt="WhatsApp Image 2026-10-19 at 12 58 43 PM (Edit)" src="https://github.com/user-attachments/assets/2851da34-7647-4e41-b01f-e8d52a29fe9d" />
 
-![Product photo](images/product.jpg)
-<!-- Replace with your photo: edit README.md on GitHub, drag-drop the image here -->
-
-![Wiring diagram](images/wiring-diagram.png)
-<!-- Replace with your diagram: edit README.md on GitHub, drag-drop the image here -->
+<img width="3000" height="2388" alt="circuit_image" src="https://github.com/user-attachments/assets/13bff1a2-356c-4c65-83c3-ceaa9751a30d" />
 
 ## Controls
 
